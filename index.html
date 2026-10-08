@@ -192,6 +192,48 @@
       if (window.HTMLCollection && !HTMLCollection.prototype.forEach) {
         HTMLCollection.prototype.forEach = Array.prototype.forEach;
       }
+      if (window.Element && !Element.prototype.matches) {
+        Element.prototype.matches = Element.prototype.webkitMatchesSelector ||
+                                    Element.prototype.msMatchesSelector ||
+                                    function(s) {
+                                      var matches = (this.document || this.ownerDocument).querySelectorAll(s),
+                                          i = matches.length;
+                                      while (--i >= 0 && matches.item(i) !== this) {}
+                                      return i > -1;
+                                    };
+      }
+      if (window.Element && !Element.prototype.closest) {
+        Element.prototype.closest = function(s) {
+          var el = this;
+          do {
+            if (el.nodeType === 1 && Element.prototype.matches.call(el, s)) return el;
+            el = el.parentElement || el.parentNode;
+          } while (el !== null && el.nodeType === 1);
+          return null;
+        };
+      }
+      if (!Array.prototype.flat) {
+        Object.defineProperty(Array.prototype, 'flat', {
+          value: function(depth) {
+            depth = depth === undefined ? 1 : Number(depth);
+            var flatten = function(arr, d) {
+              var result = [];
+              for (var i = 0; i < arr.length; i++) {
+                var val = arr[i];
+                if (Array.isArray(val) && d > 0) {
+                  result.push.apply(result, flatten(val, d - 1));
+                } else if (val !== undefined) {
+                  result.push(val);
+                }
+              }
+              return result;
+            };
+            return flatten(this, depth);
+          },
+          configurable: true,
+          writable: true
+        });
+      }
     })();
   </script>
 

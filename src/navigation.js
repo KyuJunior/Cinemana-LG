@@ -3,6 +3,26 @@
  * Complete D-pad & Magic Remote management
  */
 
+function getClosest(el, selector) {
+  if (!el) return null;
+  if (typeof el.closest === 'function') {
+    try {
+      var res = el.closest(selector);
+      if (res) return res;
+    } catch (_) {}
+  }
+  var curr = el;
+  while (curr && curr.nodeType === 1) {
+    if (typeof curr.matches === 'function') {
+      try {
+        if (curr.matches(selector)) return curr;
+      } catch (_) {}
+    }
+    curr = curr.parentElement;
+  }
+  return null;
+}
+
 export class SpatialNavigation {
   constructor() {
     this.currentFocused = null;
@@ -79,7 +99,11 @@ export class SpatialNavigation {
         block: 'nearest',
         inline: 'nearest',
       });
-    } catch (_) {}
+    } catch (_) {
+      try {
+        element.scrollIntoView(false);
+      } catch (__) {}
+    }
   }
 
   getCurrentFocused() {
@@ -93,10 +117,12 @@ export class SpatialNavigation {
   }
 
   handleMouseMove(e) {
-    const target = e.target ? e.target.closest('.focusable') : null;
-    if (target && target !== this.currentFocused) {
-      this.setFocus(target, false);
-    }
+    try {
+      const target = e.target ? getClosest(e.target, '.focusable') : null;
+      if (target && target !== this.currentFocused) {
+        this.setFocus(target, false);
+      }
+    } catch (_) {}
   }
 
   handleKeyDown(e) {
@@ -192,7 +218,7 @@ export class SpatialNavigation {
     }
 
     // Check if in side dock navigating right
-    if (current.closest('#side-dock') && direction === 'ArrowRight') {
+    if (getClosest(current, '#side-dock') && direction === 'ArrowRight') {
       const contentTarget = this.findFirstContentFocusable();
       if (contentTarget) {
         this.setFocus(contentTarget);
@@ -208,7 +234,7 @@ export class SpatialNavigation {
       this.setFocus(next);
     } else {
       // If moving left from first column in content area, jump to side navigation dock
-      if (direction === 'ArrowLeft' && !current.closest('#side-dock') && !current.closest('#screen-player')) {
+      if (direction === 'ArrowLeft' && !getClosest(current, '#side-dock') && !getClosest(current, '#screen-player')) {
         const activeNav = document.querySelector('#side-dock .nav-item.active') || document.querySelector('#side-dock .nav-item');
         if (activeNav) {
           this.setFocus(activeNav);
@@ -220,7 +246,7 @@ export class SpatialNavigation {
   findFirstContentFocusable() {
     const activeScreen = document.querySelector('.screen.active');
     if (!activeScreen) return null;
-    const items = this.getFocusableElements(activeScreen).filter(el => !el.closest('#side-dock'));
+    const items = this.getFocusableElements(activeScreen).filter(el => !getClosest(el, '#side-dock'));
     return items.length > 0 ? items[0] : null;
   }
 

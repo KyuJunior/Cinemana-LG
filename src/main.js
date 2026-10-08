@@ -449,6 +449,11 @@ async function loadMovies(page = 0) {
       els.moviesGrid.appendChild(createVideoCard(item));
     });
 
+    if (page === 0 && movies.length > 0) {
+      const first = els.moviesGrid.querySelector('.video-card');
+      if (first) nav.setFocus(first);
+    }
+
     els.moviesLoadMore.innerHTML = `
       <button id="btn-load-more-movies" class="btn btn-secondary focusable" style="padding: 12px 36px;">
         تحميل المزيد من الأفلام / Load More
@@ -489,6 +494,11 @@ async function loadSeries(page = 0) {
     series.forEach(item => {
       els.seriesGrid.appendChild(createVideoCard(item));
     });
+
+    if (page === 0 && series.length > 0) {
+      const first = els.seriesGrid.querySelector('.video-card');
+      if (first) nav.setFocus(first);
+    }
 
     els.seriesLoadMore.innerHTML = `
       <button id="btn-load-more-series" class="btn btn-secondary focusable" style="padding: 12px 36px;">
@@ -1302,6 +1312,17 @@ function init() {
 
   // Initialize Spatial Navigation
   nav.init();
+
+  // Expand side dock when focused, collapse when focus leaves
+  nav.on('focusChange', el => {
+    if (!el || !els.sideDock) return;
+    const inDock = el.closest ? el.closest('#side-dock') : (el.id === 'side-dock' || el.classList.contains('nav-item'));
+    if (inDock) {
+      els.sideDock.classList.add('expanded');
+    } else {
+      els.sideDock.classList.remove('expanded');
+    }
+  });
 
   // Render Virtual Keyboard
   renderVirtualKeyboard();

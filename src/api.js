@@ -360,12 +360,18 @@ export const CinemanaApi = {
 
       const results = await Promise.all(pagePromises);
       const map = new Map();
-      results.flat().forEach(raw => {
-        if (raw && (raw.nb || raw.id)) {
-          const item = formatVideoItem(raw);
-          if (item) map.set(item.id, item);
+      for (let p = 0; p < results.length; p++) {
+        const pageItems = results[p];
+        if (Array.isArray(pageItems)) {
+          for (let i = 0; i < pageItems.length; i++) {
+            const raw = pageItems[i];
+            if (raw && (raw.nb || raw.id)) {
+              const item = formatVideoItem(raw);
+              if (item) map.set(item.id, item);
+            }
+          }
         }
-      });
+      }
 
       const allItems = [];
       map.forEach(item => { allItems.push(item); });
@@ -386,26 +392,26 @@ export const CinemanaApi = {
         }
 
         // Starts with query
-        if (en.startsWith(qLower) || ar.startsWith(qLower)) {
+        if (en.indexOf(qLower) === 0 || ar.indexOf(qLower) === 0) {
           score += 1500;
         }
 
         // Exact word match
         const enWords = en.split(/[\s:,\-_]+/);
         const arWords = ar.split(/[\s:,\-_]+/);
-        if (enWords.includes(qLower) || arWords.includes(qLower)) {
+        if (enWords.indexOf(qLower) !== -1 || arWords.indexOf(qLower) !== -1) {
           score += 900;
         }
 
         // Substring contains query
-        if (en.includes(qLower) || ar.includes(qLower)) {
+        if (en.indexOf(qLower) !== -1 || ar.indexOf(qLower) !== -1) {
           score += 600;
         }
 
         // All query words match
         if (qWords.length > 1) {
-          const allInEn = qWords.every(w => en.includes(w));
-          const allInAr = qWords.every(w => ar.includes(w));
+          const allInEn = qWords.every(w => en.indexOf(w) !== -1);
+          const allInAr = qWords.every(w => ar.indexOf(w) !== -1);
           if (allInEn || allInAr) {
             score += 800;
           }
@@ -436,7 +442,7 @@ export const CinemanaApi = {
       const titleMatches = allItems.filter(i => {
         const en = (i.enTitle || '').toLowerCase();
         const ar = (i.arTitle || '').toLowerCase();
-        return en.includes(qLower) || ar.includes(qLower) || (qWords.length > 1 && qWords.some(w => en.includes(w) || ar.includes(w)));
+        return en.indexOf(qLower) !== -1 || ar.indexOf(qLower) !== -1 || (qWords.length > 1 && qWords.some(w => en.indexOf(w) !== -1 || ar.indexOf(w) !== -1));
       });
 
       const finalResults = titleMatches.length > 0 ? titleMatches : allItems;
