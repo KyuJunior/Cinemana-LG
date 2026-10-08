@@ -338,22 +338,17 @@ export const CinemanaApi = {
   },
 
   /**
-   * Search titles by text query using Cinemana's AdvancedSearch engine
-   * Multi-page parallel retrieval and smart relevance scoring
+   * Search titles by text query for a specific type ('series' or 'movies')
    */
-  async search(query, level = 0, pagesCount = 3) {
+  async searchType(query, type = 'movies', level = 0, pagesCount = 2) {
     const q = (query || '').trim();
     if (!q) return [];
-    const cacheKey = `search_adv_${q.toLowerCase()}_${level}_${pagesCount}`;
-    const cached = getFromCache(cacheKey);
-    if (cached) return cached;
-
     try {
       const encoded = encodeURIComponent(q);
       const pagePromises = [];
       for (let p = 0; p < pagesCount; p++) {
         pagePromises.push(
-          fetchJson(`AdvancedSearch?level=${level}&videoTitle=${encoded}&staffTitle=${encoded}&page=${p}`, null, 0)
+          fetchJson(`AdvancedSearch?level=${level}&videoTitle=${encoded}&staffTitle=${encoded}&type=${type}&page=${p}`, null, 0)
             .catch(() => [])
         );
       }
@@ -380,77 +375,74 @@ export const CinemanaApi = {
       const qLower = q.toLowerCase();
       const qWords = qLower.split(/[\s:,\-_]+/).filter(w => w.length > 0);
 
-      // Smart Relevance Scoring
       function scoreItem(item) {
         const en = (item.enTitle || '').toLowerCase();
         const ar = (item.arTitle || '').toLowerCase();
         let score = 0;
 
-        // Exact match
-        if (en === qLower || ar === qLower) {
-          score += 3000;
-        }
-
-        // Starts with query
-        if (en.indexOf(qLower) === 0 || ar.indexOf(qLower) === 0) {
-          score += 1500;
-        }
-
-        // Exact word match
+        if (en === qLower || ar === qLower) score += 3000;
+        if (en.indexOf(qLower) === 0 || ar.indexOf(qLower) === 0) score += 1500;
         const enWords = en.split(/[\s:,\-_]+/);
         const arWords = ar.split(/[\s:,\-_]+/);
-        if (enWords.indexOf(qLower) !== -1 || arWords.indexOf(qLower) !== -1) {
-          score += 900;
-        }
-
-        // Substring contains query
-        if (en.indexOf(qLower) !== -1 || ar.indexOf(qLower) !== -1) {
-          score += 600;
-        }
-
-        // All query words match
+        if (enWords.indexOf(qLower) !== -1 || arWords.indexOf(qLower) !== -1) score += 900;
+        if (en.indexOf(qLower) !== -1 || ar.indexOf(qLower) !== -1) score += 600;
         if (qWords.length > 1) {
           const allInEn = qWords.every(w => en.indexOf(w) !== -1);
           const allInAr = qWords.every(w => ar.indexOf(w) !== -1);
-          if (allInEn || allInAr) {
-            score += 800;
-          }
+          if (allInEn || allInAr) score += 800;
         }
-
-        // Recency score (newer films get slight priority on close ties)
         const year = parseInt(item.year, 10);
-        if (!isNaN(year) && year > 1900) {
-          score += Math.min(Math.max(year - 1980, 0), 45);
-        }
-
-        // Rating score
-        if (item.rating > 0) {
-          score += Math.round(item.rating * 5);
-        }
+        if (!isNaN(year) && year > 1900) score += Math.min(Math.max(year - 1980, 0), 45);
+        if (item.rating > 0) score += Math.round(item.rating * 5);
 
         return score;
       }
 
-      // Sort by computed relevance score
       allItems.sort((a, b) => {
         const diff = scoreItem(b) - scoreItem(a);
         if (diff !== 0) return diff;
         return (parseInt(b.year, 10) || 0) - (parseInt(a.year, 10) || 0);
       });
 
-      // Filter: If we have direct title matches, prioritize them over distant staff matches
       const titleMatches = allItems.filter(i => {
         const en = (i.enTitle || '').toLowerCase();
         const ar = (i.arTitle || '').toLowerCase();
         return en.indexOf(qLower) !== -1 || ar.indexOf(qLower) !== -1 || (qWords.length > 1 && qWords.some(w => en.indexOf(w) !== -1 || ar.indexOf(w) !== -1));
       });
 
-      const finalResults = titleMatches.length > 0 ? titleMatches : allItems;
-      putInCache(cacheKey, finalResults, 10 * 60 * 1000);
-      return finalResults;
+      return titleMatches.length > 0 ? titleMatches : allItems;
+    } catch (e) {
+      console.error(`Search type ${type} error:`, e);
+      return [];
+    }
+  },
+
+  /**
+   * Search titles by text query returning separate series and movies collections
+   */
+  async search(query, level = 0, pagesCount = 2) {
+    const q = (query || '').trim();
+    if (!q) return { series: [], movies: [], all: [] };
+    const cacheKey = `search_dual_${q.toLowerCase()}_${level}_${pagesCount}`;
+    const cached = getFromCache(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const [series, movies] = await Promise.all([
+        this.searchType(q, 'series', level, pagesCount).catch(() => []),
+        this.searchType(q, 'movies', level, pagesCount).catch(() => []),
+      ]);
+
+      const result = {
+        series,
+        movies,
+        all: [...series, ...movies],
+      };
+      putInCache(cacheKey, result, 10 * 60 * 1000);
+      return result;
     } catch (e) {
       console.error('AdvancedSearch error:', e);
-      return [];
+      return { series: [], movies: [], all: [] };
     }
   },
 

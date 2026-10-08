@@ -43,6 +43,8 @@ const state = {
   saveProgressTimer: null,
   keyboardMode: 'en', // 'en' or 'ar'
   searchDebounceTimer: null,
+  searchFilter: 'all',
+  searchResults: { series: [], movies: [], all: [] },
 };
 
 // DOM Element Cache
@@ -58,7 +60,18 @@ const els = {
   searchInput: document.getElementById('search-input'),
   searchClearBtn: document.getElementById('search-clear-btn'),
   virtualKeyboardContainer: document.getElementById('virtual-keyboard-container'),
-  searchResultsGrid: document.getElementById('search-results-grid'),
+  searchFilterTabs: document.getElementById('search-filter-tabs'),
+  tabCountAll: document.getElementById('tab-count-all'),
+  tabCountSeries: document.getElementById('tab-count-series'),
+  tabCountMovies: document.getElementById('tab-count-movies'),
+  searchStatusContainer: document.getElementById('search-status-container'),
+  searchSectionsWrapper: document.getElementById('search-sections-wrapper'),
+  searchSectionSeries: document.getElementById('search-section-series'),
+  searchSeriesBadge: document.getElementById('search-series-badge'),
+  searchSeriesGrid: document.getElementById('search-series-grid'),
+  searchSectionMovies: document.getElementById('search-section-movies'),
+  searchMoviesBadge: document.getElementById('search-movies-badge'),
+  searchMoviesGrid: document.getElementById('search-movies-grid'),
   favoritesGrid: document.getElementById('favorites-grid'),
   detailsViewContainer: document.getElementById('details-view-container'),
   videoElement: document.getElementById('video-element'),
@@ -1345,28 +1358,77 @@ function renderVirtualKeyboard() {
   });
 }
 
+function renderSearchSections() {
+  const filter = state.searchFilter;
+  const hasSeries = state.searchResults.series && state.searchResults.series.length > 0;
+  const hasMovies = state.searchResults.movies && state.searchResults.movies.length > 0;
+
+  // Update active state on tab buttons
+  document.querySelectorAll('.search-tab-btn').forEach(btn => {
+    if (btn.getAttribute('data-filter') === filter) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+
+  if (filter === 'series') {
+    if (els.searchSectionSeries) els.searchSectionSeries.style.display = hasSeries ? 'flex' : 'none';
+    if (els.searchSectionMovies) els.searchSectionMovies.style.display = 'none';
+  } else if (filter === 'movies') {
+    if (els.searchSectionSeries) els.searchSectionSeries.style.display = 'none';
+    if (els.searchSectionMovies) els.searchSectionMovies.style.display = hasMovies ? 'flex' : 'none';
+  } else {
+    // 'all' -> show both sections if they have items
+    if (els.searchSectionSeries) els.searchSectionSeries.style.display = hasSeries ? 'flex' : 'none';
+    if (els.searchSectionMovies) els.searchSectionMovies.style.display = hasMovies ? 'flex' : 'none';
+  }
+}
+
+function clearSearchResults() {
+  els.searchInput.value = '';
+  state.searchResults = { series: [], movies: [], all: [] };
+  state.searchFilter = 'all';
+  if (els.searchFilterTabs) els.searchFilterTabs.style.display = 'none';
+  if (els.searchStatusContainer) els.searchStatusContainer.innerHTML = '';
+  if (els.searchSectionSeries) els.searchSectionSeries.style.display = 'none';
+  if (els.searchSectionMovies) els.searchSectionMovies.style.display = 'none';
+  if (els.searchSeriesGrid) els.searchSeriesGrid.innerHTML = '';
+  if (els.searchMoviesGrid) els.searchMoviesGrid.innerHTML = '';
+}
+
 async function executeSearchNow() {
   clearTimeout(state.searchDebounceTimer);
   const q = els.searchInput.value.trim();
   if (!q) {
-    els.searchResultsGrid.innerHTML = '';
+    clearSearchResults();
     return;
   }
 
   const settings = Storage.getSettings();
-  els.searchResultsGrid.innerHTML = `
-    <div class="spinner-container" style="grid-column: 1/-1;">
+  if (els.searchFilterTabs) els.searchFilterTabs.style.display = 'none';
+  if (els.searchSectionSeries) els.searchSectionSeries.style.display = 'none';
+  if (els.searchSectionMovies) els.searchSectionMovies.style.display = 'none';
+  if (els.searchSeriesGrid) els.searchSeriesGrid.innerHTML = '';
+  if (els.searchMoviesGrid) els.searchMoviesGrid.innerHTML = '';
+
+  els.searchStatusContainer.innerHTML = `
+    <div class="spinner-container" style="padding: 40px 0;">
       <div class="spinner"></div>
-      <p style="color: var(--text-secondary); font-size: 14px;">جاري البحث عن "${q}"...</p>
+      <p style="color: var(--text-secondary); font-size: 14px; margin-top: 12px;">جاري البحث عن "${q}"...</p>
     </div>
   `;
 
   try {
     const results = await CinemanaApi.search(q, settings.parentalLevel);
-    els.searchResultsGrid.innerHTML = '';
-    if (!results.length) {
-      els.searchResultsGrid.innerHTML = `
-        <div class="empty-state" style="grid-column: 1/-1; padding: 60px 20px;">
+    state.searchResults = results;
+    const series = results.series || [];
+    const movies = results.movies || [];
+    const total = series.length + movies.length;
+
+    if (total === 0) {
+      els.searchStatusContainer.innerHTML = `
+        <div class="empty-state" style="padding: 60px 20px;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48" style="color: var(--text-muted);">
             <circle cx="11" cy="11" r="8"/>
             <path d="m21 21-4.3-4.3"/>
@@ -1375,16 +1437,38 @@ async function executeSearchNow() {
           <p>تأكد من كتابة اسم العمل بشكل صحيح أو جرب البحث باللغة الإنجليزية أو العربية.</p>
         </div>
       `;
+      if (els.searchFilterTabs) els.searchFilterTabs.style.display = 'none';
       return;
     }
 
-    results.forEach(item => {
-      els.searchResultsGrid.appendChild(createVideoCard(item));
+    // Clear spinner status
+    els.searchStatusContainer.innerHTML = '';
+
+    // Update counts & badges
+    if (els.tabCountAll) els.tabCountAll.textContent = total;
+    if (els.tabCountSeries) els.tabCountSeries.textContent = series.length;
+    if (els.tabCountMovies) els.tabCountMovies.textContent = movies.length;
+    if (els.searchSeriesBadge) els.searchSeriesBadge.textContent = series.length;
+    if (els.searchMoviesBadge) els.searchMoviesBadge.textContent = movies.length;
+
+    // Populate Series section
+    series.forEach(item => {
+      els.searchSeriesGrid.appendChild(createVideoCard(item));
     });
+
+    // Populate Movies section
+    movies.forEach(item => {
+      els.searchMoviesGrid.appendChild(createVideoCard(item));
+    });
+
+    // Show filter tabs bar and render the two sections
+    if (els.searchFilterTabs) els.searchFilterTabs.style.display = 'flex';
+    renderSearchSections();
+
   } catch (e) {
     console.error('Search error:', e);
-    els.searchResultsGrid.innerHTML = `
-      <div class="empty-state" style="grid-column: 1/-1;">
+    els.searchStatusContainer.innerHTML = `
+      <div class="empty-state">
         <p style="color: var(--accent-crimson);">حدث خطأ أثناء إجراء البحث.</p>
       </div>
     `;
@@ -1395,7 +1479,7 @@ function triggerSearch() {
   clearTimeout(state.searchDebounceTimer);
   const q = els.searchInput.value.trim();
   if (!q) {
-    els.searchResultsGrid.innerHTML = '';
+    clearSearchResults();
     return;
   }
 
@@ -1413,9 +1497,17 @@ els.searchInput.addEventListener('keydown', (e) => {
 });
 
 els.searchClearBtn.addEventListener('click', () => {
-  els.searchInput.value = '';
-  els.searchResultsGrid.innerHTML = '';
+  clearSearchResults();
   els.searchInput.focus();
+});
+
+// Category Filter Tabs Click Handlers
+document.querySelectorAll('.search-tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const filter = btn.getAttribute('data-filter') || 'all';
+    state.searchFilter = filter;
+    renderSearchSections();
+  });
 });
 
 /**

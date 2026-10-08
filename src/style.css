@@ -1205,6 +1205,94 @@ html, body {
   transform: scale(1.08);
 }
 
+/* Search Sections & Filter Tabs */
+.search-tabs-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.search-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--border-radius-sm);
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  transition: all var(--transition-speed) ease;
+}
+
+.search-tab-btn .tab-badge {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.search-tab-btn.active {
+  background: rgba(245, 158, 11, 0.18);
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+}
+
+.search-tab-btn.active .tab-badge {
+  background: var(--accent-gold);
+  color: #000000;
+}
+
+.search-tab-btn.focused,
+.search-tab-btn:focus {
+  background: var(--accent-gold);
+  color: #000000;
+  border-color: #ffffff;
+  transform: scale(1.05);
+}
+
+.search-tab-btn.focused .tab-badge,
+.search-tab-btn:focus .tab-badge {
+  background: #000000;
+  color: #ffffff;
+}
+
+.search-sections-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  padding-bottom: 50px;
+}
+
+.search-category-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.search-section-header {
+  padding: 0 var(--safe-padding-x);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.search-section-header .section-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.search-section-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
 /* Settings View Components */
 .settings-container {
   padding: 30px var(--safe-padding-x);

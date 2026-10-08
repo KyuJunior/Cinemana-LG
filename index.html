@@ -377,8 +377,66 @@
             <button id="search-clear-btn" class="btn btn-secondary focusable" style="padding: 6px 12px; font-size: 12px;">مسح / Clear</button>
           </div>
           <div id="virtual-keyboard-container" class="virtual-keyboard"></div>
+          <!-- Quick Category Filter Tabs -->
+          <div id="search-filter-tabs" class="search-tabs-bar" style="display: none;">
+            <button class="search-tab-btn focusable active" data-filter="all">
+              <span>الكل / All</span>
+              <span id="tab-count-all" class="tab-badge">0</span>
+            </button>
+            <button class="search-tab-btn focusable" data-filter="series">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                <rect width="20" height="15" x="2" y="7" rx="2" ry="2"/>
+                <polyline points="17 2 12 7 7 2"/>
+              </svg>
+              <span>المسلسلات / Series</span>
+              <span id="tab-count-series" class="tab-badge">0</span>
+            </button>
+            <button class="search-tab-btn focusable" data-filter="movies">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                <rect width="18" height="18" x="3" y="3" rx="2"/>
+                <path d="M7 3v18M3 7.5h4M3 12h18M3 16.5h4M17 3v18M17 7.5h4M17 16.5h4"/>
+              </svg>
+              <span>الأفلام / Movies</span>
+              <span id="tab-count-movies" class="tab-badge">0</span>
+            </button>
+          </div>
         </div>
-        <div id="search-results-grid" class="grid-container"></div>
+
+        <!-- Search Status / Message Container (Spinner, Empty state, etc.) -->
+        <div id="search-status-container" style="padding: 0 var(--safe-padding-x);"></div>
+
+        <!-- Two Dedicated Sections Container: Series + Movies -->
+        <div id="search-sections-wrapper" class="search-sections-wrapper">
+          <!-- Section 1: Series -->
+          <div id="search-section-series" class="search-category-section" style="display: none;">
+            <div class="search-section-header">
+              <div class="section-heading">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22" style="color: var(--accent-gold);">
+                  <rect width="20" height="15" x="2" y="7" rx="2" ry="2"/>
+                  <polyline points="17 2 12 7 7 2"/>
+                </svg>
+                <h2 class="search-section-title">المسلسلات / TV Series</h2>
+                <span id="search-series-badge" class="badge badge-crimson">0</span>
+              </div>
+            </div>
+            <div id="search-series-grid" class="grid-container"></div>
+          </div>
+
+          <!-- Section 2: Movies -->
+          <div id="search-section-movies" class="search-category-section" style="display: none;">
+            <div class="search-section-header">
+              <div class="section-heading">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22" style="color: var(--accent-gold);">
+                  <rect width="18" height="18" x="3" y="3" rx="2"/>
+                  <path d="M7 3v18M3 7.5h4M3 12h18M3 16.5h4M17 3v18M17 7.5h4M17 16.5h4"/>
+                </svg>
+                <h2 class="search-section-title">الأفلام / Movies</h2>
+                <span id="search-movies-badge" class="badge badge-gold">0</span>
+              </div>
+            </div>
+            <div id="search-movies-grid" class="grid-container"></div>
+          </div>
+        </div>
       </section>
 
       <!-- Favorites Screen -->
