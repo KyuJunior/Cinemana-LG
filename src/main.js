@@ -218,10 +218,10 @@ function createVideoCard(video, index = 0) {
   card.tabIndex = 0;
   card.setAttribute('data-id', video.id);
 
-  const title = video.primaryTitle || video.displayTitle;
+  const title = video.primaryTitle || video.displayTitle || video.enTitle || video.arTitle || 'Untitled';
   const ratingText = video.rating > 0 ? video.rating.toFixed(1) : '';
   const yearText = video.year || '';
-  const kindText = video.isSeries ? 'Series' : (video.formattedDuration || 'Movie');
+  const kindText = video.isSeries ? 'مسلسل / Series' : (video.formattedDuration || 'فيلم / Movie');
 
   card.innerHTML = `
     <div class="poster-container">
@@ -1054,14 +1054,14 @@ const KEYBOARDS = {
     ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
     ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
     ['Z', 'X', 'C', 'V', 'B', 'N', 'M'],
-    ['AR', 'SPACE', 'BACKSPACE'],
+    ['AR', 'SPACE', 'BACKSPACE', 'SEARCH'],
   ],
   ar: [
     ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
     ['ض', 'ص', 'ث', 'ق', 'ف', 'غ', 'ع', 'ه', 'خ', 'ح', 'ج', 'د'],
     ['ش', 'س', 'ي', 'ب', 'ل', 'ا', 'ت', 'ن', 'م', 'ك', 'ط'],
     ['ئ', 'ء', 'ؤ', 'ر', 'لا', 'ى', 'ة', 'و', 'ز', 'ظ'],
-    ['EN', 'SPACE', 'BACKSPACE'],
+    ['EN', 'SPACE', 'BACKSPACE', 'SEARCH'],
   ],
 };
 
@@ -1093,6 +1093,18 @@ function renderVirtualKeyboard() {
           els.searchInput.value = els.searchInput.value.slice(0, -1);
           triggerSearch();
         });
+      } else if (key === 'SEARCH') {
+        keyBtn.classList.add('wide', 'btn-primary');
+        keyBtn.innerHTML = `
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="m21 21-4.3-4.3"/>
+          </svg>
+          <span>بحث / Search</span>
+        `;
+        keyBtn.addEventListener('click', () => {
+          executeSearchNow();
+        });
       } else if (key === 'AR' || key === 'EN') {
         keyBtn.classList.add('wide');
         keyBtn.textContent = key === 'AR' ? 'العربية' : 'English';
@@ -1115,6 +1127,52 @@ function renderVirtualKeyboard() {
   });
 }
 
+async function executeSearchNow() {
+  clearTimeout(state.searchDebounceTimer);
+  const q = els.searchInput.value.trim();
+  if (!q) {
+    els.searchResultsGrid.innerHTML = '';
+    return;
+  }
+
+  const settings = Storage.getSettings();
+  els.searchResultsGrid.innerHTML = `
+    <div class="spinner-container" style="grid-column: 1/-1;">
+      <div class="spinner"></div>
+      <p style="color: var(--text-secondary); font-size: 14px;">جاري البحث عن "${q}"...</p>
+    </div>
+  `;
+
+  try {
+    const results = await CinemanaApi.search(q, settings.parentalLevel);
+    els.searchResultsGrid.innerHTML = '';
+    if (!results.length) {
+      els.searchResultsGrid.innerHTML = `
+        <div class="empty-state" style="grid-column: 1/-1; padding: 60px 20px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48" style="color: var(--text-muted);">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="m21 21-4.3-4.3"/>
+          </svg>
+          <h2 style="font-size: 18px; color: #ffffff;">لم يتم العثور على نتائج لـ "${q}"</h2>
+          <p>تأكد من كتابة اسم العمل بشكل صحيح أو جرب البحث باللغة الإنجليزية أو العربية.</p>
+        </div>
+      `;
+      return;
+    }
+
+    results.forEach(item => {
+      els.searchResultsGrid.appendChild(createVideoCard(item));
+    });
+  } catch (e) {
+    console.error('Search error:', e);
+    els.searchResultsGrid.innerHTML = `
+      <div class="empty-state" style="grid-column: 1/-1;">
+        <p style="color: var(--accent-crimson);">حدث خطأ أثناء إجراء البحث.</p>
+      </div>
+    `;
+  }
+}
+
 function triggerSearch() {
   clearTimeout(state.searchDebounceTimer);
   const q = els.searchInput.value.trim();
@@ -1123,36 +1181,19 @@ function triggerSearch() {
     return;
   }
 
-  state.searchDebounceTimer = setTimeout(async () => {
-    const settings = Storage.getSettings();
-    els.searchResultsGrid.innerHTML = `
-      <div class="spinner-container" style="grid-column: 1/-1;">
-        <div class="spinner"></div>
-      </div>
-    `;
-
-    try {
-      const results = await CinemanaApi.search(q, settings.parentalLevel);
-      els.searchResultsGrid.innerHTML = '';
-      if (!results.length) {
-        els.searchResultsGrid.innerHTML = `
-          <div class="empty-state" style="grid-column: 1/-1;">
-            <p>لم يتم العثور على نتائج مطابقة لـ "${q}"</p>
-          </div>
-        `;
-        return;
-      }
-
-      results.forEach(item => {
-        els.searchResultsGrid.appendChild(createVideoCard(item));
-      });
-    } catch (e) {
-      console.error('Search error:', e);
-    }
-  }, 400);
+  state.searchDebounceTimer = setTimeout(() => {
+    executeSearchNow();
+  }, 450);
 }
 
 els.searchInput.addEventListener('input', triggerSearch);
+els.searchInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    executeSearchNow();
+  }
+});
+
 els.searchClearBtn.addEventListener('click', () => {
   els.searchInput.value = '';
   els.searchResultsGrid.innerHTML = '';

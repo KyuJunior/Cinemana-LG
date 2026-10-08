@@ -76,20 +76,34 @@ export function formatVideoItem(raw) {
     }
   }
 
+  const en = (raw.en_title || raw.custom_en_title || '').trim();
+  const ar = (raw.ar_title || raw.custom_ar_title || '').trim();
+  const primaryTitle = en || ar || 'Untitled';
+  const displayTitle = (en && ar && en !== ar) ? `${en} (${ar})` : primaryTitle;
+  const secondaryTitle = (en && ar && en !== ar) ? ar : '';
+
+  const isValidUrl = url => url && typeof url === 'string' && url.startsWith('http') && !url.includes('loading.gif') && !url.includes('defaultImages');
+
   let posterUrl = '';
-  if (raw.imgMediumThumbObjUrl && raw.imgMediumThumbObjUrl.startsWith('http')) {
+  if (isValidUrl(raw.imgMediumThumbObjUrl)) {
     posterUrl = raw.imgMediumThumbObjUrl;
-  } else if (raw.imgObjUrl && raw.imgObjUrl.startsWith('http')) {
+  } else if (isValidUrl(raw.imgObjUrl)) {
     posterUrl = raw.imgObjUrl;
-  } else if (raw.imgThumbObjUrl && raw.imgThumbObjUrl.startsWith('http')) {
+  } else if (isValidUrl(raw.imgThumbObjUrl)) {
     posterUrl = raw.imgThumbObjUrl;
+  } else if (raw.imgMediumThumb) {
+    posterUrl = `https://cnth2.shabakaty.com/vascin-poster-images/${raw.imgMediumThumb}`;
   } else if (raw.img) {
     posterUrl = `https://cnth2.shabakaty.com/vascin-poster-images/${raw.img}`;
   }
 
+  if (posterUrl && posterUrl.includes('.shabakaty.cc')) {
+    posterUrl = posterUrl.replace('.shabakaty.cc', '.shabakaty.com');
+  }
+
   let backdropUrl = posterUrl;
-  if (raw.imgObjUrl && raw.imgObjUrl.startsWith('http')) {
-    backdropUrl = raw.imgObjUrl;
+  if (isValidUrl(raw.imgObjUrl)) {
+    backdropUrl = raw.imgObjUrl.replace('.shabakaty.cc', '.shabakaty.com');
   }
 
   const durationSec = parseFloat(raw.duration) || 0;
@@ -103,8 +117,11 @@ export function formatVideoItem(raw) {
 
   return {
     id: String(raw.nb || raw.id || ''),
-    arTitle: raw.ar_title || raw.custom_ar_title || '',
-    enTitle: raw.en_title || raw.custom_en_title || '',
+    primaryTitle,
+    displayTitle,
+    secondaryTitle,
+    arTitle: ar,
+    enTitle: en,
     arContent: raw.ar_content || '',
     enContent: raw.en_content || '',
     year: String(raw.year || ''),
@@ -322,20 +339,113 @@ export const CinemanaApi = {
   },
 
   /**
-   * Search titles by text query
+   * Search titles by text query using Cinemana's AdvancedSearch engine
+   * Multi-page parallel retrieval and smart relevance scoring
    */
-  async search(query, level = 0) {
+  async search(query, level = 0, pagesCount = 3) {
     const q = (query || '').trim();
     if (!q) return [];
-    const cacheKey = `search_${q.toLowerCase()}_${level}`;
-    const encoded = encodeURIComponent(q);
-    const raw = await fetchJson(
-      `video/V/2/itemsPerPage/30/video_title_search/${encoded}/itemsPerPage/30/pageNumber/0/level/${level}`,
-      cacheKey,
-      10 * 60 * 1000
-    );
-    if (!Array.isArray(raw)) return [];
-    return raw.map(formatVideoItem).filter(Boolean);
+    const cacheKey = `search_adv_${q.toLowerCase()}_${level}_${pagesCount}`;
+    const cached = getFromCache(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const encoded = encodeURIComponent(q);
+      const pagePromises = [];
+      for (let p = 0; p < pagesCount; p++) {
+        pagePromises.push(
+          fetchJson(`AdvancedSearch?level=${level}&videoTitle=${encoded}&staffTitle=${encoded}&page=${p}`, null, 0)
+            .catch(() => [])
+        );
+      }
+
+      const results = await Promise.all(pagePromises);
+      const map = new Map();
+      results.flat().forEach(raw => {
+        if (raw && (raw.nb || raw.id)) {
+          const item = formatVideoItem(raw);
+          if (item) map.set(item.id, item);
+        }
+      });
+
+      const allItems = Array.from(map.values());
+      if (allItems.length === 0) return [];
+
+      const qLower = q.toLowerCase();
+      const qWords = qLower.split(/[\s:,\-_]+/).filter(w => w.length > 0);
+
+      // Smart Relevance Scoring
+      function scoreItem(item) {
+        const en = (item.enTitle || '').toLowerCase();
+        const ar = (item.arTitle || '').toLowerCase();
+        let score = 0;
+
+        // Exact match
+        if (en === qLower || ar === qLower) {
+          score += 3000;
+        }
+
+        // Starts with query
+        if (en.startsWith(qLower) || ar.startsWith(qLower)) {
+          score += 1500;
+        }
+
+        // Exact word match
+        const enWords = en.split(/[\s:,\-_]+/);
+        const arWords = ar.split(/[\s:,\-_]+/);
+        if (enWords.includes(qLower) || arWords.includes(qLower)) {
+          score += 900;
+        }
+
+        // Substring contains query
+        if (en.includes(qLower) || ar.includes(qLower)) {
+          score += 600;
+        }
+
+        // All query words match
+        if (qWords.length > 1) {
+          const allInEn = qWords.every(w => en.includes(w));
+          const allInAr = qWords.every(w => ar.includes(w));
+          if (allInEn || allInAr) {
+            score += 800;
+          }
+        }
+
+        // Recency score (newer films get slight priority on close ties)
+        const year = parseInt(item.year, 10);
+        if (!isNaN(year) && year > 1900) {
+          score += Math.min(Math.max(year - 1980, 0), 45);
+        }
+
+        // Rating score
+        if (item.rating > 0) {
+          score += Math.round(item.rating * 5);
+        }
+
+        return score;
+      }
+
+      // Sort by computed relevance score
+      allItems.sort((a, b) => {
+        const diff = scoreItem(b) - scoreItem(a);
+        if (diff !== 0) return diff;
+        return (parseInt(b.year, 10) || 0) - (parseInt(a.year, 10) || 0);
+      });
+
+      // Filter: If we have direct title matches, prioritize them over distant staff matches
+      const titleMatches = allItems.filter(i => {
+        const en = (i.enTitle || '').toLowerCase();
+        const ar = (i.arTitle || '').toLowerCase();
+        return en.includes(qLower) || ar.includes(qLower) || (qWords.length > 1 && qWords.some(w => en.includes(w) || ar.includes(w)));
+      });
+
+      const finalResults = titleMatches.length > 0 ? titleMatches : allItems;
+      putInCache(cacheKey, finalResults, 10 * 60 * 1000);
+      return finalResults;
+    } catch (e) {
+      console.error('AdvancedSearch error:', e);
+      return [];
+    }
   },
 
   /**
