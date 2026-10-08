@@ -84,12 +84,17 @@ const els = {
   btnPlayerQuality: document.getElementById('btn-player-quality'),
   labelPlayerSubs: document.getElementById('label-player-subs'),
   labelPlayerQuality: document.getElementById('label-player-quality'),
+  btnPlayerFullscreen: document.getElementById('btn-player-fullscreen'),
+  ctrlIconFullscreen: document.getElementById('ctrl-icon-fullscreen'),
+  ctrlIconNormalscreen: document.getElementById('ctrl-icon-normalscreen'),
+  labelPlayerFullscreen: document.getElementById('label-player-fullscreen'),
   modalQuality: document.getElementById('modal-quality'),
   modalQualityOptions: document.getElementById('modal-quality-options'),
   btnCloseModalQuality: document.getElementById('btn-close-modal-quality'),
   modalSubtitles: document.getElementById('modal-subtitles'),
   modalSubtitlesOptions: document.getElementById('modal-subtitles-options'),
   btnCloseModalSubtitles: document.getElementById('btn-close-modal-subtitles'),
+  screenPlayer: document.getElementById('screen-player'),
   toast: document.getElementById('app-toast'),
 };
 
@@ -822,6 +827,12 @@ async function startPlayback(video) {
       }
     }, 8000);
 
+    // Reset aspect ratio classes and fullscreen button icons
+    if (els.videoElement) els.videoElement.classList.remove('fit-cover', 'fit-fill');
+    if (els.ctrlIconFullscreen) els.ctrlIconFullscreen.style.display = 'block';
+    if (els.ctrlIconNormalscreen) els.ctrlIconNormalscreen.style.display = 'none';
+    if (els.labelPlayerFullscreen) els.labelPlayerFullscreen.textContent = 'ملء الشاشة / Fullscreen';
+
     // Register back handler
     nav.pushBackHandler(exitPlayer);
     nav.setFocus(els.btnPlayerPlayPause);
@@ -833,12 +844,20 @@ async function startPlayback(video) {
   }
 }
 
+function hideOsd() {
+  clearTimeout(state.osdTimer);
+  els.playerOsd.classList.remove('visible');
+  state.isOsdVisible = false;
+}
+
 function exitPlayer() {
+  hideOsd();
   if (els.videoElement) {
     if (state.activeDetailsVideo && els.videoElement.duration > 60) {
       Storage.savePlaybackProgress(state.activeDetailsVideo, els.videoElement.currentTime, els.videoElement.duration);
     }
     els.videoElement.pause();
+    els.videoElement.classList.remove('fit-cover', 'fit-fill');
     els.videoElement.removeAttribute('src');
     els.videoElement.load();
   }
@@ -874,11 +893,15 @@ function showOsd(autoHide = true) {
   state.isOsdVisible = true;
   clearTimeout(state.osdTimer);
 
+  // If focus is outside OSD, ensure Play/Pause button is focused
+  if (!nav.currentFocused || !els.playerOsd.contains(nav.currentFocused)) {
+    nav.setFocus(els.btnPlayerPlayPause);
+  }
+
   if (autoHide) {
     state.osdTimer = setTimeout(() => {
       if (els.videoElement && !els.videoElement.paused) {
-        els.playerOsd.classList.remove('visible');
-        state.isOsdVisible = false;
+        hideOsd();
       }
     }, 4500);
   }
@@ -1056,6 +1079,189 @@ nav.on('mediaKey', ({ key }) => {
   else if (key === 'Rewind') els.videoElement.currentTime = Math.max(0, els.videoElement.currentTime - 10);
   else if (key === 'FastForward') els.videoElement.currentTime = Math.min(els.videoElement.duration || 0, els.videoElement.currentTime + 10);
 });
+
+/**
+ * Fullscreen / Aspect Ratio Toggle
+ */
+function toggleFullscreenMode() {
+  const video = els.videoElement;
+  if (!video) return;
+
+  // Attempt standard webOS / HTML5 fullscreen API
+  try {
+    const doc = document;
+    const isFull = doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement;
+    if (!isFull) {
+      if (doc.documentElement.requestFullscreen) {
+        doc.documentElement.requestFullscreen();
+      } else if (doc.documentElement.webkitRequestFullscreen) {
+        doc.documentElement.webkitRequestFullscreen();
+      }
+    }
+  } catch (_) {}
+
+  // Cycle video fit mode: contain -> cover (zoom) -> fill (stretch) -> contain
+  if (video.classList.contains('fit-cover')) {
+    video.classList.remove('fit-cover');
+    video.classList.add('fit-fill');
+    if (els.ctrlIconFullscreen) els.ctrlIconFullscreen.style.display = 'none';
+    if (els.ctrlIconNormalscreen) els.ctrlIconNormalscreen.style.display = 'block';
+    if (els.labelPlayerFullscreen) els.labelPlayerFullscreen.textContent = 'تمديد / Stretch';
+    showToast('وضع العرض: تمديد ملء الشاشة (Stretch)');
+  } else if (video.classList.contains('fit-fill')) {
+    video.classList.remove('fit-fill');
+    if (els.ctrlIconFullscreen) els.ctrlIconFullscreen.style.display = 'block';
+    if (els.ctrlIconNormalscreen) els.ctrlIconNormalscreen.style.display = 'none';
+    if (els.labelPlayerFullscreen) els.labelPlayerFullscreen.textContent = 'ملء الشاشة / Fullscreen';
+    showToast('وضع العرض: الحجم الأصلي (Fit)');
+  } else {
+    video.classList.add('fit-cover');
+    if (els.ctrlIconFullscreen) els.ctrlIconFullscreen.style.display = 'none';
+    if (els.ctrlIconNormalscreen) els.ctrlIconNormalscreen.style.display = 'block';
+    if (els.labelPlayerFullscreen) els.labelPlayerFullscreen.textContent = 'تكبير / Zoom';
+    showToast('وضع العرض: تكبير ملء الشاشة (Zoom Fill)');
+  }
+
+  showOsd(true);
+}
+
+if (els.btnPlayerFullscreen) {
+  els.btnPlayerFullscreen.addEventListener('click', toggleFullscreenMode);
+}
+
+// Click to seek on timeline track
+if (els.playerTimeline) {
+  els.playerTimeline.addEventListener('click', (e) => {
+    if (!els.videoElement || !els.videoElement.duration) return;
+    const rect = els.playerTimeline.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const pct = Math.max(0, Math.min(1, clickX / rect.width));
+    els.videoElement.currentTime = pct * els.videoElement.duration;
+    showOsd(true);
+  });
+}
+
+// Magic Remote cursor & click wake-up handlers on player
+if (els.screenPlayer) {
+  els.screenPlayer.addEventListener('mousemove', () => {
+    const isPlayerActive = state.currentRoute === 'player' || els.screenPlayer.classList.contains('active');
+    if (isPlayerActive) {
+      showOsd(true);
+    }
+  });
+
+  els.screenPlayer.addEventListener('click', (e) => {
+    const isPlayerActive = state.currentRoute === 'player' || els.screenPlayer.classList.contains('active');
+    if (!isPlayerActive) return;
+    const interactive = e.target.closest('button, .osd-ctrl-btn, .osd-timeline-track, .modal-box');
+    if (!interactive) {
+      const isOsdVisible = els.playerOsd && els.playerOsd.classList.contains('visible');
+      if (!isOsdVisible) {
+        showOsd(true);
+      } else {
+        if (els.videoElement.paused) {
+          els.videoElement.play();
+        } else {
+          els.videoElement.pause();
+        }
+        showOsd(true);
+      }
+    }
+  });
+}
+
+// Global High-Priority Player Remote Key Listener (Capture Phase)
+window.addEventListener('keydown', (e) => {
+  const isPlayerActive = state.currentRoute === 'player' || (els.screenPlayer && els.screenPlayer.classList.contains('active'));
+  if (!isPlayerActive) return;
+
+  let key = e.key;
+  const keyCode = e.keyCode;
+
+  if (!key || key === 'undefined') {
+    if (keyCode === 38) key = 'ArrowUp';
+    else if (keyCode === 40) key = 'ArrowDown';
+    else if (keyCode === 37) key = 'ArrowLeft';
+    else if (keyCode === 39) key = 'ArrowRight';
+    else if (keyCode === 13) key = 'Enter';
+    else if (keyCode === 27 || keyCode === 461 || keyCode === 8) key = 'Escape';
+    else if (keyCode === 415) key = 'Play';
+    else if (keyCode === 19) key = 'Pause';
+    else if (keyCode === 179 || keyCode === 10252) key = 'PlayPause';
+    else if (keyCode === 412) key = 'Rewind';
+    else if (keyCode === 417) key = 'FastForward';
+  }
+  if (key === 'Up') key = 'ArrowUp';
+  if (key === 'Down') key = 'ArrowDown';
+  if (key === 'Left') key = 'ArrowLeft';
+  if (key === 'Right') key = 'ArrowRight';
+  if (key === 'Esc' || keyCode === 461) key = 'Escape';
+
+  // If a modal dialog is open, let modal handle navigation
+  if (els.modalQuality.classList.contains('active') || els.modalSubtitles.classList.contains('active')) {
+    return;
+  }
+
+  const isOsdVisible = els.playerOsd && els.playerOsd.classList.contains('visible');
+
+  // Handle Back / Return key
+  if (key === 'Escape') {
+    if (isOsdVisible) {
+      e.preventDefault();
+      e.stopPropagation();
+      hideOsd();
+      return;
+    }
+    // If OSD is already hidden, allow default SpatialNavigation back handler to exit player
+    return;
+  }
+
+  // Handle Media keys directly
+  if (['Play', 'Pause', 'PlayPause', 'Rewind', 'FastForward'].includes(key) || [415, 19, 179, 412, 417, 10252].includes(keyCode)) {
+    showOsd(true);
+    if (key === 'Play' || keyCode === 415) els.videoElement.play();
+    else if (key === 'Pause' || keyCode === 19) els.videoElement.pause();
+    else if (key === 'PlayPause' || keyCode === 179 || keyCode === 10252) {
+      if (els.videoElement.paused) els.videoElement.play();
+      else els.videoElement.pause();
+    }
+    else if (key === 'Rewind' || keyCode === 412) els.videoElement.currentTime = Math.max(0, els.videoElement.currentTime - 10);
+    else if (key === 'FastForward' || keyCode === 417) els.videoElement.currentTime = Math.min(els.videoElement.duration || 0, els.videoElement.currentTime + 10);
+    e.preventDefault();
+    e.stopPropagation();
+    return;
+  }
+
+  // If OSD is currently hidden: ANY remote key (OK/Enter, D-pad arrows) wakes up OSD immediately
+  if (!isOsdVisible) {
+    e.preventDefault();
+    e.stopPropagation();
+    showOsd(true);
+    nav.setFocus(els.btnPlayerPlayPause);
+    return;
+  }
+
+  // If OSD is visible and user is on timeline track, allow seeking with Left/Right
+  if (nav.currentFocused === els.playerTimeline) {
+    if (key === 'ArrowLeft') {
+      e.preventDefault();
+      e.stopPropagation();
+      els.videoElement.currentTime = Math.max(0, els.videoElement.currentTime - 10);
+      showOsd(true);
+      return;
+    }
+    if (key === 'ArrowRight') {
+      e.preventDefault();
+      e.stopPropagation();
+      els.videoElement.currentTime = Math.min(els.videoElement.duration || 0, els.videoElement.currentTime + 10);
+      showOsd(true);
+      return;
+    }
+  }
+
+  // Keep OSD alive while interacting
+  showOsd(true);
+}, true);
 
 /**
  * Virtual On-Screen TV Keyboard

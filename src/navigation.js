@@ -57,7 +57,21 @@ export class SpatialNavigation {
     }
   }
 
-  getFocusableElements(container = document) {
+  getFocusableElements(container = null) {
+    if (!container || container === document) {
+      const activeModal = document.querySelector('.modal-overlay.active');
+      if (activeModal) {
+        container = activeModal;
+      } else {
+        const playerScreen = document.getElementById('screen-player');
+        if (playerScreen && playerScreen.classList.contains('active')) {
+          container = playerScreen;
+        } else {
+          container = document;
+        }
+      }
+    }
+
     const selector = '.focusable:not([disabled]):not([data-nav-disabled="true"])';
     const all = Array.from(container.querySelectorAll(selector));
     return all.filter(el => {
@@ -65,7 +79,15 @@ export class SpatialNavigation {
       const rect = el.getBoundingClientRect();
       if (rect.width === 0 && rect.height === 0) return false;
       const style = window.getComputedStyle(el);
-      return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+      if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+
+      // If inside player OSD and OSD is not visible, exclude
+      const parentOsd = getClosest(el, '#player-osd');
+      if (parentOsd && !parentOsd.classList.contains('visible')) {
+        return false;
+      }
+
+      return true;
     });
   }
 

@@ -860,6 +860,15 @@ html, body {
   height: 100%;
   object-fit: contain;
   background: #000000;
+  transition: object-fit 0.2s ease;
+}
+
+#video-element.fit-cover {
+  object-fit: cover !important;
+}
+
+#video-element.fit-fill {
+  object-fit: fill !important;
 }
 
 /* Subtitle Display Overlay */
