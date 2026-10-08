@@ -32,16 +32,45 @@ export class SpatialNavigation {
 
     this.onKeyDown = this.handleKeyDown.bind(this);
     this.onMouseMove = this.handleMouseMove.bind(this);
+    this.onCursorStateChange = this.handleCursorStateChange.bind(this);
+    this.onWheel = this.handleWheel.bind(this);
   }
 
   init() {
     window.addEventListener('keydown', this.onKeyDown, { passive: false });
     window.addEventListener('mousemove', this.onMouseMove, { passive: true });
+    window.addEventListener('wheel', this.onWheel, { passive: false });
+    document.addEventListener('cursorStateChange', this.onCursorStateChange);
   }
 
   destroy() {
     window.removeEventListener('keydown', this.onKeyDown);
     window.removeEventListener('mousemove', this.onMouseMove);
+    window.removeEventListener('wheel', this.onWheel);
+    document.removeEventListener('cursorStateChange', this.onCursorStateChange);
+  }
+
+  handleCursorStateChange(event) {
+    const isVisible = event && event.detail ? Boolean(event.detail.visibility) : false;
+    if (isVisible) {
+      document.body.classList.add('pointer-active');
+    } else {
+      document.body.classList.remove('pointer-active');
+      const current = this.getCurrentFocused();
+      if (current) this.setFocus(current, true);
+    }
+    this.emit('cursorStateChange', { isVisible });
+  }
+
+  handleWheel(e) {
+    // Magic remote wheel smooth scrolling
+    const activeScreen = document.querySelector('.screen.active');
+    if (!activeScreen) return;
+    const shelf = e.target ? getClosest(e.target, '.shelf-row, .episodes-track') : null;
+    if (shelf) {
+      shelf.scrollLeft += e.deltaY;
+      e.preventDefault();
+    }
   }
 
   pushBackHandler(handler) {
@@ -177,15 +206,39 @@ export class SpatialNavigation {
       return;
     }
 
+    // Broadcast TV Color Keys (Red 403, Green 404, Yellow 405, Blue 406)
+    if (keyCode === 403 || key === 'Red') {
+      this.emit('colorKey', { color: 'red', keyCode: 403, event: e });
+      return;
+    }
+    if (keyCode === 404 || key === 'Green') {
+      this.emit('colorKey', { color: 'green', keyCode: 404, event: e });
+      return;
+    }
+    if (keyCode === 405 || key === 'Yellow') {
+      this.emit('colorKey', { color: 'yellow', keyCode: 405, event: e });
+      return;
+    }
+    if (keyCode === 406 || key === 'Blue') {
+      this.emit('colorKey', { color: 'blue', keyCode: 406, event: e });
+      return;
+    }
+
     // Handle Back / Escape
-    if (key === 'Escape') {
+    if (key === 'Escape' || keyCode === 461) {
       e.preventDefault();
+      e.stopPropagation();
       if (this.backHandlers.length > 0) {
         const topHandler = this.backHandlers[this.backHandlers.length - 1];
         const handled = topHandler();
         if (handled) return;
       }
       this.emit('back', e);
+
+      // If at root of app and no back handlers remain, gracefully exit via webOS platform API
+      if (window.webOS && typeof window.webOS.platformBack === 'function') {
+        window.webOS.platformBack();
+      }
       return;
     }
 

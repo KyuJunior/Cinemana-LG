@@ -44,6 +44,24 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Magic Remote & D-pad Cursor Management (webOS) */
+body:not(.pointer-active),
+body:not(.pointer-active) * {
+  cursor: none !important;
+}
+
+body.pointer-active,
+body.pointer-active * {
+  cursor: default;
+}
+
+body.pointer-active .focusable,
+body.pointer-active button,
+body.pointer-active a,
+body.pointer-active input {
+  cursor: pointer;
+}
+
 /* Base App Container - 1920x1080 fixed coordinate system */
 .app-container {
   width: 100vw;
@@ -287,6 +305,50 @@ html, body {
 
 .nav-item.focused .nav-label-en {
   color: var(--accent-gold);
+}
+
+.dock-color-keys {
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dock-color-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.dock-color-item .color-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
+}
+
+.dock-color-item .color-dot.dot-red { background: #ef4444; }
+.dock-color-item .color-dot.dot-green { background: #22c55e; }
+.dock-color-item .color-dot.dot-yellow { background: #eab308; }
+.dock-color-item .color-dot.dot-blue { background: #3b82f6; }
+
+.dock-color-label {
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+#side-dock.expanded .dock-color-label,
+#side-dock:focus-within .dock-color-label,
+#side-dock:hover .dock-color-label {
+  opacity: 0.9;
 }
 
 .dock-footer {

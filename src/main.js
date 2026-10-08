@@ -1927,6 +1927,109 @@ function init() {
       }
     }
   });
+
+  // WebOS TV Color Key Shortcuts (Red 403, Green 404, Yellow 405, Blue 406)
+  nav.on('colorKey', ({ color }) => {
+    if (color === 'red') {
+      // Red: Quick Search
+      if (state.currentRoute !== 'player') {
+        navigateToRoute('search');
+        if (els.searchInput) els.searchInput.focus();
+        showToast('🔴 الانتقال السريع: البحث');
+      }
+    } else if (color === 'green') {
+      // Green: Favorites Quick Action
+      const detailsOpen = document.getElementById('screen-details').classList.contains('active');
+      if (detailsOpen && state.activeDetailsVideo) {
+        const isFav = Storage.toggleFavorite(state.activeDetailsVideo);
+        const favBtn = document.getElementById('btn-details-fav');
+        if (favBtn) {
+          favBtn.classList.toggle('active', isFav);
+          favBtn.innerHTML = isFav
+            ? `<svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> إزالة من المفضلة`
+            : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> إضافة للمفضلة`;
+        }
+        showToast(isFav ? '🟢 تمت الإضافة إلى المفضلة' : '🟢 تمت الإزالة من المفضلة');
+      } else if (state.currentRoute !== 'player') {
+        navigateToRoute('favorites');
+        showToast('🟢 الانتقال السريع: المفضلة');
+      }
+    } else if (color === 'yellow') {
+      // Yellow: Subtitles in Player / Keyboard Layout in Search
+      if (state.currentRoute === 'player') {
+        setSubtitleToolbarMode(!state.activeSubtitlesMode);
+        showToast('🟡 تبديل شريط الترجمة');
+      } else if (state.currentRoute === 'search') {
+        state.keyboardMode = state.keyboardMode === 'en' ? 'ar' : 'en';
+        renderVirtualKeyboard();
+        showToast(`🟡 تبديل لغة لوحة المفاتيح إلى ${state.keyboardMode === 'ar' ? 'العربية' : 'English'}`);
+      }
+    } else if (color === 'blue') {
+      // Blue: Cut Sensitive Scenes in Player / Quick Settings in Navigation
+      if (state.currentRoute === 'player') {
+        state.isCensorEnabled = !state.isCensorEnabled;
+        updateCensorButtonState();
+        Storage.updateSettings({ cutCensoredScenes: state.isCensorEnabled });
+        showToast(state.isCensorEnabled ? '🔵 ✂️ تم تفعيل قص المشاهد غير اللائقة' : '🔵 تم إيقاف قص المشاهد غير اللائقة');
+        showOsd(true);
+      } else {
+        navigateToRoute('settings');
+        showToast('🔵 الانتقال السريع: الإعدادات');
+      }
+    }
+  });
+
+  // WebOS App Lifecycle: Background & Foreground Visibility Management
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      if (els.videoElement && !els.videoElement.paused) {
+        els.videoElement.pause();
+        state.wasPlayingBeforeHidden = true;
+      }
+      clearInterval(state.saveProgressTimer);
+    } else {
+      if (state.wasPlayingBeforeHidden && els.videoElement && state.currentRoute === 'player') {
+        els.videoElement.play();
+        state.wasPlayingBeforeHidden = false;
+      }
+    }
+  });
+
+  // WebOS App Launch & Relaunch Deep Linking
+  function handleWebOSLaunchParams(params) {
+    if (!params) return;
+    try {
+      const parsed = typeof params === 'string' ? JSON.parse(params) : params;
+      const targetId = parsed.videoId || parsed.contentId || parsed.id;
+      if (targetId) {
+        showToast('جاري فتح المحتوى المطلوب...');
+        CinemanaApi.getVideoDetails(targetId).then(video => {
+          if (video) openDetails(video);
+        }).catch(err => console.error('Deep link launch error:', err));
+      }
+    } catch (_) {}
+  }
+
+  document.addEventListener('webOSLaunch', e => handleWebOSLaunchParams(e.detail));
+  document.addEventListener('webOSRelaunch', e => handleWebOSLaunchParams(e.detail));
+
+  // Luna Service Bus: Network Connectivity Watcher
+  if (window.webOS && window.webOS.service) {
+    try {
+      window.webOS.service.request('luna://com.webos.service.connectionmanager/', {
+        method: 'getStatus',
+        parameters: { subscribe: true },
+        onSuccess: function(res) {
+          if (res && typeof res.isInternetConnectionAvailable === 'boolean') {
+            if (!res.isInternetConnectionAvailable) {
+              showToast('⚠️ انقطع اتصال التلفزيون بالإنترنت', 5000);
+            }
+          }
+        },
+        onFailure: function(_) {}
+      });
+    } catch (_) {}
+  }
 }
 
 // Start app on DOM ready

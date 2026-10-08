@@ -9,5 +9,15 @@
   "vendor": "Cinemana",
   "resolution": "1920x1080",
   "appDescription": "Cinemana client for LG webOS TV",
+  "disableBackHistoryAPI": true,
+  "handlesRelaunch": true,
+  "trustLevel": "default",
+  "allowAudioPassthrough": true,
+  "useVirtualKeyboard": true,
+  "enableKeyboard": true,
+  "requiredPermissions": [
+    "media.operation",
+    "network.query"
+  ],
   "requiredACG": []
 }
