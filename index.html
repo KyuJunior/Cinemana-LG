@@ -80,6 +80,29 @@
           writable: true
         });
       }
+      if (!String.prototype.endsWith) {
+        Object.defineProperty(String.prototype, 'endsWith', {
+          value: function(search, this_len) {
+            if (this_len === undefined || this_len > this.length) {
+              this_len = this.length;
+            }
+            return this.substring(this_len - search.length, this_len) === search;
+          },
+          configurable: true,
+          writable: true
+        });
+      }
+      if (!String.prototype.includes) {
+        Object.defineProperty(String.prototype, 'includes', {
+          value: function(search, start) {
+            if (search instanceof RegExp) throw TypeError('first argument must not be a RegExp');
+            if (start === undefined) start = 0;
+            return this.indexOf(search, start) !== -1;
+          },
+          configurable: true,
+          writable: true
+        });
+      }
       if (!Object.assign) {
         Object.defineProperty(Object, 'assign', {
           value: function(target) {
@@ -101,9 +124,78 @@
           writable: true
         });
       }
+      if (!String.prototype.padStart) {
+        Object.defineProperty(String.prototype, 'padStart', {
+          value: function(targetLength, padString) {
+            targetLength = targetLength >> 0;
+            padString = String(typeof padString !== 'undefined' ? padString : ' ');
+            if (this.length >= targetLength) return String(this);
+            var fill = '';
+            var padLen = targetLength - this.length;
+            while (fill.length < padLen) fill += padString;
+            return fill.slice(0, padLen) + String(this);
+          },
+          configurable: true,
+          writable: true
+        });
+      }
+      if (!String.prototype.padEnd) {
+        Object.defineProperty(String.prototype, 'padEnd', {
+          value: function(targetLength, padString) {
+            targetLength = targetLength >> 0;
+            padString = String(typeof padString !== 'undefined' ? padString : ' ');
+            if (this.length >= targetLength) return String(this);
+            var fill = '';
+            var padLen = targetLength - this.length;
+            while (fill.length < padLen) fill += padString;
+            return String(this) + fill.slice(0, padLen);
+          },
+          configurable: true,
+          writable: true
+        });
+      }
+      if (!Object.values) {
+        Object.defineProperty(Object, 'values', {
+          value: function(obj) {
+            if (obj == null) throw new TypeError('Cannot convert undefined or null to object');
+            var vals = [];
+            for (var key in obj) {
+              if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                vals.push(obj[key]);
+              }
+            }
+            return vals;
+          },
+          configurable: true,
+          writable: true
+        });
+      }
+      if (!Object.entries) {
+        Object.defineProperty(Object, 'entries', {
+          value: function(obj) {
+            if (obj == null) throw new TypeError('Cannot convert undefined or null to object');
+            var res = [];
+            for (var key in obj) {
+              if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                res.push([key, obj[key]]);
+              }
+            }
+            return res;
+          },
+          configurable: true,
+          writable: true
+        });
+      }
+      if (window.NodeList && !NodeList.prototype.forEach) {
+        NodeList.prototype.forEach = Array.prototype.forEach;
+      }
+      if (window.HTMLCollection && !HTMLCollection.prototype.forEach) {
+        HTMLCollection.prototype.forEach = Array.prototype.forEach;
+      }
     })();
   </script>
 
+  <script src="./fetch.umd.js"></script>
   <script src="./webOSTV.js"></script>
   <link rel="stylesheet" href="./src/style.css">
 </head>

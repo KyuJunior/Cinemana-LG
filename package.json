@@ -13,7 +13,9 @@
     "webos:launch": "ares-launch"
   },
   "dependencies": {
-    "hls.js": "^1.5.8"
+    "hls.js": "^1.5.8",
+    "whatwg-fetch": "^3.6.20",
+    "ws": "^8.22.0"
   },
   "devDependencies": {
     "@vitejs/plugin-legacy": "^5.4.3",

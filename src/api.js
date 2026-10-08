@@ -31,7 +31,6 @@ export function clearApiCache() {
 
 const defaultHeaders = {
   'Accept': 'application/json',
-  'User-Agent': 'Mozilla/5.0 (SmartTV; webOS.TV; Linux; U) AppleWebKit/537.36 (KHTML, like Gecko)',
 };
 
 async function fetchJson(endpoint, cacheKey = null, ttlMs = 10 * 60 * 1000) {
@@ -82,7 +81,7 @@ export function formatVideoItem(raw) {
   const displayTitle = (en && ar && en !== ar) ? `${en} (${ar})` : primaryTitle;
   const secondaryTitle = (en && ar && en !== ar) ? ar : '';
 
-  const isValidUrl = url => url && typeof url === 'string' && url.startsWith('http') && !url.includes('loading.gif') && !url.includes('defaultImages');
+  const isValidUrl = url => url && typeof url === 'string' && url.indexOf('http') === 0 && url.indexOf('loading.gif') === -1 && url.indexOf('defaultImages') === -1;
 
   let posterUrl = '';
   if (isValidUrl(raw.imgMediumThumbObjUrl)) {
@@ -97,7 +96,7 @@ export function formatVideoItem(raw) {
     posterUrl = `https://cnth2.shabakaty.com/vascin-poster-images/${raw.img}`;
   }
 
-  if (posterUrl && posterUrl.includes('.shabakaty.cc')) {
+  if (posterUrl && posterUrl.indexOf('.shabakaty.cc') !== -1) {
     posterUrl = posterUrl.replace('.shabakaty.cc', '.shabakaty.com');
   }
 
@@ -368,7 +367,8 @@ export const CinemanaApi = {
         }
       });
 
-      const allItems = Array.from(map.values());
+      const allItems = [];
+      map.forEach(item => { allItems.push(item); });
       if (allItems.length === 0) return [];
 
       const qLower = q.toLowerCase();

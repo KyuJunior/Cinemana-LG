@@ -2,6 +2,7 @@
  * Cinemana for LG webOS TV - Main Application Controller
  */
 
+import 'whatwg-fetch';
 import { CinemanaApi } from './api.js';
 import { Storage } from './storage.js';
 import { SpatialNavigation } from './navigation.js';
@@ -120,7 +121,7 @@ function formatTime(seconds) {
   const mins = Math.floor((totalSecs % 3600) / 60);
   const secs = totalSecs % 60;
 
-  const pad = num => String(num).padStart(2, '0');
+  const pad = num => (num < 10 ? '0' + num : '' + num);
   if (hrs > 0) {
     return `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
   }
@@ -133,8 +134,9 @@ function formatTime(seconds) {
 function updateClock() {
   if (!els.playerClockText) return;
   const now = new Date();
-  const hrs = String(now.getHours()).padStart(2, '0');
-  const mins = String(now.getMinutes()).padStart(2, '0');
+  const pad = num => (num < 10 ? '0' + num : '' + num);
+  const hrs = pad(now.getHours());
+  const mins = pad(now.getMinutes());
   els.playerClockText.textContent = `${hrs}:${mins}`;
 }
 setInterval(updateClock, 30000);
@@ -371,10 +373,10 @@ async function loadHomeContent() {
 
   try {
     const [banners, movies, series, groups] = await Promise.all([
-      CinemanaApi.getBanners(level),
-      CinemanaApi.getLatestMovies(0, 20, level),
-      CinemanaApi.getLatestSeries(0, 20, level),
-      CinemanaApi.getVideoGroups('ar', level),
+      CinemanaApi.getBanners(level).catch(e => { console.warn('Banners error:', e); return []; }),
+      CinemanaApi.getLatestMovies(0, 20, level).catch(e => { console.warn('Movies error:', e); return []; }),
+      CinemanaApi.getLatestSeries(0, 20, level).catch(e => { console.warn('Series error:', e); return []; }),
+      CinemanaApi.getVideoGroups('ar', level).catch(e => { console.warn('Groups error:', e); return []; }),
     ]);
 
     state.banners = banners;
