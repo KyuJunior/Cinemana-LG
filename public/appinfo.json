@@ -1,0 +1,13 @@
+{
+  "id": "com.cinemana.webos",
+  "title": "Cinemana",
+  "type": "web",
+  "main": "index.html",
+  "icon": "icon.png",
+  "largeIcon": "largeIcon.png",
+  "version": "1.0.0",
+  "vendor": "Cinemana",
+  "resolution": "1920x1080",
+  "appDescription": "Cinemana client for LG webOS TV",
+  "requiredACG": []
+}

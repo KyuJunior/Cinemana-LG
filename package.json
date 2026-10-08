@@ -1,0 +1,24 @@
+{
+  "name": "cinemana-lg-webos",
+  "version": "1.0.0",
+  "description": "Cinemana streaming client for LG webOS TV",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && node post-build.js",
+    "preview": "vite preview",
+    "webos:package": "ares-package dist --no-minify",
+    "webos:install": "ares-install",
+    "webos:launch": "ares-launch"
+  },
+  "dependencies": {
+    "hls.js": "^1.5.8"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-legacy": "^5.4.3",
+    "@webos-tools/cli": "latest",
+    "terser": "^5.48.0",
+    "vite": "^5.0.0",
+    "webostvjs": "latest"
+  }
+}

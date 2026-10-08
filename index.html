@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="ar" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Cinemana - سينمانا</title>
+  <link rel="icon" type="image/png" href="./icon.png">
+  <link rel="apple-touch-icon" href="./icon.png">
+
+  <!-- webOS Legacy Chromium Compatibility Polyfills -->
+  <script>
+    (function() {
+      if (!Array.prototype.includes) {
+        Object.defineProperty(Array.prototype, 'includes', {
+          value: function(searchElement, fromIndex) {
+            if (this == null) throw new TypeError('"this" is null or not defined');
+            var o = Object(this);
+            var len = o.length >>> 0;
+            if (len === 0) return false;
+            var n = fromIndex | 0;
+            var k = Math.max(n >= 0 ? n : len - Math.abs(n), 0);
+            while (k < len) {
+              if (o[k] === searchElement) return true;
+              k++;
+            }
+            return false;
+          },
+          configurable: true,
+          writable: true
+        });
+      }
+      if (!Array.prototype.find) {
+        Object.defineProperty(Array.prototype, 'find', {
+          value: function(predicate) {
+            if (this == null) throw new TypeError('"this" is null or not defined');
+            var o = Object(this);
+            var len = o.length >>> 0;
+            var thisArg = arguments[1];
+            for (var i = 0; i < len; i++) {
+              if (predicate.call(thisArg, o[i], i, o)) return o[i];
+            }
+            return undefined;
+          },
+          configurable: true,
+          writable: true
+        });
+      }
+      if (!Array.prototype.findIndex) {
+        Object.defineProperty(Array.prototype, 'findIndex', {
+          value: function(predicate) {
+            if (this == null) throw new TypeError('"this" is null or not defined');
+            var o = Object(this);
+            var len = o.length >>> 0;
+            var thisArg = arguments[1];
+            for (var i = 0; i < len; i++) {
+              if (predicate.call(thisArg, o[i], i, o)) return i;
+            }
+            return -1;
+          },
+          configurable: true,
+          writable: true
+        });
+      }
+      if (!Array.from) {
+        Object.defineProperty(Array, 'from', {
+          value: function(object) {
+            return Array.prototype.slice.call(object);
+          },
+          configurable: true,
+          writable: true
+        });
+      }
+      if (!String.prototype.startsWith) {
+        Object.defineProperty(String.prototype, 'startsWith', {
+          value: function(searchString, position) {
+            var pos = position || 0;
+            return this.indexOf(searchString, pos) === pos;
+          },
+          configurable: true,
+          writable: true
+        });
+      }
+      if (!Object.assign) {
+        Object.defineProperty(Object, 'assign', {
+          value: function(target) {
+            if (target == null) throw new TypeError('Cannot convert undefined or null to object');
+            var to = Object(target);
+            for (var index = 1; index < arguments.length; index++) {
+              var nextSource = arguments[index];
+              if (nextSource != null) {
+                for (var nextKey in nextSource) {
+                  if (Object.prototype.hasOwnProperty.call(nextSource, nextKey)) {
+                    to[nextKey] = nextSource[nextKey];
+                  }
+                }
+              }
+            }
+            return to;
+          },
+          configurable: true,
+          writable: true
+        });
+      }
+    })();
+  </script>
+
+  <script src="./webOSTV.js"></script>
+  <link rel="stylesheet" href="./src/style.css">
+</head>
+<body>
+  <div id="app" class="app-container">
+
+    <!-- Left Side Navigation Dock -->
+    <nav id="side-dock">
+      <div class="brand-section">
+        <img src="./assets/cinemana_logo.png" alt="Cinemana" class="brand-logo-img">
+        <div class="brand-title-box">
+          <span class="brand-name-ar">سينمانا</span>
+          <span class="brand-name-en">CINEMANA</span>
+        </div>
+      </div>
+
+      <div class="nav-menu">
+        <button id="nav-btn-home" class="nav-item focusable active" data-route="home">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          <div class="nav-label-box">
+            <span class="nav-label-ar">الرئيسية</span>
+            <span class="nav-label-en">Home</span>
+          </div>
+        </button>
+
+        <button id="nav-btn-movies" class="nav-item focusable" data-route="movies">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="18" height="18" x="3" y="3" rx="2"/>
+            <path d="M7 3v18"/>
+            <path d="M3 7.5h4"/>
+            <path d="M3 12h18"/>
+            <path d="M3 16.5h4"/>
+            <path d="M17 3v18"/>
+            <path d="M17 7.5h4"/>
+            <path d="M17 16.5h4"/>
+          </svg>
+          <div class="nav-label-box">
+            <span class="nav-label-ar">الأفلام</span>
+            <span class="nav-label-en">Movies</span>
+          </div>
+        </button>
+
+        <button id="nav-btn-series" class="nav-item focusable" data-route="series">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="20" height="15" x="2" y="7" rx="2" ry="2"/>
+            <polyline points="17 2 12 7 7 2"/>
+          </svg>
+          <div class="nav-label-box">
+            <span class="nav-label-ar">المسلسلات</span>
+            <span class="nav-label-en">Series</span>
+          </div>
+        </button>
+
+        <button id="nav-btn-search" class="nav-item focusable" data-route="search">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="m21 21-4.3-4.3"/>
+          </svg>
+          <div class="nav-label-box">
+            <span class="nav-label-ar">بحث</span>
+            <span class="nav-label-en">Search</span>
+          </div>
+        </button>
+
+        <button id="nav-btn-favorites" class="nav-item focusable" data-route="favorites">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>
+          </svg>
+          <div class="nav-label-box">
+            <span class="nav-label-ar">المفضلة</span>
+            <span class="nav-label-en">Favorites</span>
+          </div>
+        </button>
+
+        <button id="nav-btn-settings" class="nav-item focusable" data-route="settings">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          <div class="nav-label-box">
+            <span class="nav-label-ar">الإعدادات</span>
+            <span class="nav-label-en">Settings</span>
+          </div>
+        </button>
+      </div>
+
+      <div class="dock-footer">
+        <button id="nav-btn-terms" class="footer-link focusable" data-route="terms">الشروط والأحكام</button>
+        <button id="nav-btn-privacy" class="footer-link focusable" data-route="privacy">سياسة الخصوصية</button>
+      </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main id="main-content">
+
+      <!-- Home Screen -->
+      <section id="screen-home" class="screen active">
+        <div id="home-hero-container"></div>
+        <div id="home-shelves-container">
+          <div class="spinner-container">
+            <div class="spinner"></div>
+            <p style="color: var(--text-secondary); font-size: 15px;">جاري تحميل المحتوى من شبكتي سينمانا...</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Movies Screen -->
+      <section id="screen-movies" class="screen">
+        <div class="page-header">
+          <h1 class="page-title">الأفلام / Latest Movies</h1>
+        </div>
+        <div id="movies-grid" class="grid-container"></div>
+        <div id="movies-load-more" style="text-align: center; padding: 20px;"></div>
+      </section>
+
+      <!-- Series Screen -->
+      <section id="screen-series" class="screen">
+        <div class="page-header">
+          <h1 class="page-title">المسلسلات / Latest Series</h1>
+        </div>
+        <div id="series-grid" class="grid-container"></div>
+        <div id="series-load-more" style="text-align: center; padding: 20px;"></div>
+      </section>
+
+      <!-- Search Screen -->
+      <section id="screen-search" class="screen">
+        <div class="search-top-bar">
+          <div class="search-input-wrapper">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22" style="color: var(--text-muted);">
+              <circle cx="11" cy="11" r="8"/>
+              <path d="m21 21-4.3-4.3"/>
+            </svg>
+            <input type="text" id="search-input" class="search-input-field" placeholder="ابحث عن الأفلام والمسلسلات... Search movies or series" autocomplete="off">
+            <button id="search-clear-btn" class="btn btn-secondary focusable" style="padding: 6px 12px; font-size: 12px;">مسح / Clear</button>
+          </div>
+          <div id="virtual-keyboard-container" class="virtual-keyboard"></div>
+        </div>
+        <div id="search-results-grid" class="grid-container"></div>
+      </section>
+
+      <!-- Favorites Screen -->
+      <section id="screen-favorites" class="screen">
+        <div class="page-header">
+          <h1 class="page-title">المفضلة / My Favorites</h1>
+        </div>
+        <div id="favorites-grid" class="grid-container"></div>
+      </section>
+
+      <!-- Settings Screen -->
+      <section id="screen-settings" class="screen">
+        <div class="page-header">
+          <h1 class="page-title">الإعدادات / Settings</h1>
+        </div>
+        <div class="settings-container">
+          <div class="settings-card">
+            <div class="settings-card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" style="color: var(--accent-gold);">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+              </svg>
+              <span>جودة الفيديو الافتراضية / Preferred Streaming Quality</span>
+            </div>
+            <div class="settings-row">
+              <div class="settings-label-box">
+                <span class="settings-label">دقة العرض / Default Resolution</span>
+                <span class="settings-desc">يتم اختيار هذه الجودة تلقائيا عند بدء تشغيل أي فيديو</span>
+              </div>
+              <div class="settings-options-group" id="settings-quality-group">
+                <button class="pill-option focusable" data-quality="2160p">4K (2160p)</button>
+                <button class="pill-option focusable active" data-quality="1080p">1080p</button>
+                <button class="pill-option focusable" data-quality="720p">720p</button>
+                <button class="pill-option focusable" data-quality="480p">480p</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-card">
+            <div class="settings-card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" style="color: var(--accent-gold);">
+                <rect width="18" height="18" x="3" y="3" rx="2"/>
+                <path d="M12 8v8"/>
+                <path d="M8 12h8"/>
+              </svg>
+              <span>مستوى التقييم العائلي / Parental Content Filter</span>
+            </div>
+            <div class="settings-row">
+              <div class="settings-label-box">
+                <span class="settings-label">مستوى الفلترة / Filter Level</span>
+                <span class="settings-desc">تحديد مستوى تصنيف المحتوى المعروض في التطبيق</span>
+              </div>
+              <div class="settings-options-group" id="settings-parental-group">
+                <button class="pill-option focusable active" data-level="0">الكل / All (0)</button>
+                <button class="pill-option focusable" data-level="1">عائلي / Family (1)</button>
+                <button class="pill-option focusable" data-level="2">مقيد / Strict (2)</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-card">
+            <div class="settings-card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" style="color: var(--accent-gold);">
+                <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                <path d="M3 3v5h5"/>
+                <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+                <path d="M16 21h5v-5"/>
+              </svg>
+              <span>إدارة الذاكرة والبيانات / Storage Management</span>
+            </div>
+            <div class="settings-row">
+              <div class="settings-label-box">
+                <span class="settings-label">مسح سجل المشاهدة / Clear Watch History</span>
+                <span class="settings-desc">حذف مواقع الاستئناف المحفوظة للفيديوهات</span>
+              </div>
+              <button id="btn-clear-history" class="btn btn-secondary focusable">مسح السجل</button>
+            </div>
+            <div class="settings-row">
+              <div class="settings-label-box">
+                <span class="settings-label">إعادة ضبط البيانات / Reset All App Data</span>
+                <span class="settings-desc">حذف المفضلة وسجل المشاهدة والإعدادات</span>
+              </div>
+              <button id="btn-clear-all" class="btn btn-danger focusable">إعادة ضبط</button>
+            </div>
+          </div>
+
+          <div class="settings-card">
+            <div class="settings-card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" style="color: var(--accent-gold);">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="16" x2="12" y2="12"/>
+                <line x1="12" y1="8" x2="12.01" y2="8"/>
+              </svg>
+              <span>معلومات التطبيق والقانونية / App & Legal</span>
+            </div>
+            <div class="settings-row">
+              <div class="settings-label-box">
+                <span class="settings-label">الإصدار / Version</span>
+                <span class="settings-desc">Cinemana LG webOS Client v1.0.0 (1080p Engine)</span>
+              </div>
+              <span class="badge badge-gold">Active</span>
+            </div>
+            <div class="settings-row">
+              <div class="settings-label-box">
+                <span class="settings-label">الشروط والأحكام / Terms & Conditions</span>
+                <span class="settings-desc">شروط الاستخدام والخدمة للتطبيق</span>
+              </div>
+              <button id="btn-open-terms" class="btn btn-secondary focusable" data-route="terms">عرض الشروط</button>
+            </div>
+            <div class="settings-row">
+              <div class="settings-label-box">
+                <span class="settings-label">سياسة الخصوصية / Privacy Policy</span>
+                <span class="settings-desc">سياسة معالجة وحماية البيانات المحلية</span>
+              </div>
+              <button id="btn-open-privacy" class="btn btn-secondary focusable" data-route="privacy">عرض السياسة</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Dedicated Terms & Conditions Screen -->
+      <section id="screen-terms" class="screen">
+        <div class="legal-container">
+          <div class="legal-header">
+            <button id="btn-terms-back" class="btn btn-secondary focusable">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                <polyline points="15 18 9 12 15 6"/>
+              </svg>
+              رجوع / Back
+            </button>
+            <h1 class="page-title">الشروط والأحكام / Terms & Conditions</h1>
+          </div>
+          <div class="legal-body">
+            <h2>1. شروط الاستخدام العامة</h2>
+            <p>تطبيق Cinemana LG webOS مخصص للاستخدام المنزلي الترفيهي على أجهزة تلفزيون LG العاملة بنظام webOS TV ضمن نطاق شبكة مزود الخدمة المعتمد. يتيح التطبيق تصفح وتشغيل المحتوى الرقمي المتوفر على خوادم سينمانا المحلية.</p>
+            
+            <h2>2. الملكية الفكرية وحقوق المحتوى</h2>
+            <p>جميع العلامات التجارية وشعارات سينمانا ومحتويات الفيديو والأوصاف والترجمات مملوكة لشبكتي ولأصحاب الحقوق المعتمدين. يوفر هذا التطبيق واجهة استخدام مخصصة للتلفزيون لتسهيل الوصول والتصفح.</p>
+
+            <h2>3. الأداء والاتصال بالشبكة</h2>
+            <p>يعتمد تشغيل الفيديو وجودة البث على استقرار اتصال الشبكة بمزود الخدمة المحلي في العراق. التطبيق لا يتحمل مسؤولية انقطاع الخدمة الناتج عن خوادم المصدر أو شبكة المزود.</p>
+
+            <h2>4. التحديثات والتعديلات</h2>
+            <p>يحق للمطور تحديث وظائف التطبيق وواجهات المستخدم لتحسين الأداء ودعم أحدث مواصفات أجهزة LG webOS TV دوريا.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Dedicated Privacy Policy Screen -->
+      <section id="screen-privacy" class="screen">
+        <div class="legal-container">
+          <div class="legal-header">
+            <button id="btn-privacy-back" class="btn btn-secondary focusable">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                <polyline points="15 18 9 12 15 6"/>
+              </svg>
+              رجوع / Back
+            </button>
+            <h1 class="page-title">سياسة الخصوصية / Privacy Policy</h1>
+          </div>
+          <div class="legal-body">
+            <h2>1. البيانات المحفوظة محليا</h2>
+            <p>يقوم تطبيق Cinemana LG webOS بحفظ تفضيلات المستخدم (مثل دقة الفيديو الافتراضية، ومستوى الفلترة)، وسجل المشاهدة لمتابعة الفيديوهات من النقطة الأخيرة، وقائمة المفضلة محليا على ذاكرة التلفزيون (localStorage) فقط.</p>
+
+            <h2>2. عدم جمع البيانات الشخصية</h2>
+            <p>التطبيق لا يجمع أي معلومات تعريفية شخصية، ولا يتطلب إنشاء حساب خارجي، ولا يقوم بنقل أو بيع أي بيانات تصفح لأي أطراف ثالثة.</p>
+
+            <h2>3. الاتصال المباشر بخوادم المصدر</h2>
+            <p>تتم كافة اتصالات الشبكة مباشرة بين تلفزيون LG وخوادم Shabakaty Cinemana المعتمدة عبر بروتوكول HTTPS الآمن دون خوادم وسيطة.</p>
+
+            <h2>4. التحكم في البيانات</h2>
+            <p>يمكن للمستخدم في أي وقت مسح سجل المشاهدة أو إعادة ضبط كافة البيانات المحفوظة محليا مباشرة من خلال شاشة الإعدادات داخل التطبيق.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Details Screen Overlay -->
+      <div id="screen-details" class="screen">
+        <div id="details-view-container"></div>
+      </div>
+
+      <!-- Fullscreen Player Screen -->
+      <div id="screen-player" class="screen">
+        <div class="player-video-box">
+          <video id="video-element" playsinline></video>
+        </div>
+
+        <!-- Subtitles Display Box -->
+        <div id="subtitles-display"></div>
+
+        <!-- Skip Intro Action Banner -->
+        <div id="skip-intro-box">
+          <button id="btn-skip-intro" class="btn btn-primary focusable" style="font-size: 16px; padding: 12px 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.8);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+              <polygon points="5 4 15 12 5 20 5 4"/>
+              <line x1="19" y1="5" x2="19" y2="19"/>
+            </svg>
+            تخطي المقدمة / Skip Intro
+          </button>
+        </div>
+
+        <!-- Player OSD Overlay -->
+        <div id="player-osd">
+          <div class="osd-top-bar">
+            <div class="osd-title-group">
+              <button id="btn-player-back" class="btn btn-secondary focusable" style="padding: 10px 16px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                  <polyline points="15 18 9 12 15 6"/>
+                </svg>
+                رجوع / Back
+              </button>
+              <span id="player-title-text" class="osd-title-text">Cinemana Stream</span>
+            </div>
+            <div id="player-clock-text" class="osd-clock-text">00:00</div>
+          </div>
+
+          <div class="osd-bottom-bar">
+            <div class="osd-progress-row">
+              <span id="player-current-time" class="time-display">00:00</span>
+              <div id="player-timeline" class="osd-timeline-track focusable" tabindex="0">
+                <div id="player-timeline-buffer" class="osd-timeline-buffer"></div>
+                <div id="player-timeline-played" class="osd-timeline-played"></div>
+              </div>
+              <span id="player-total-time" class="time-display">00:00</span>
+            </div>
+
+            <div class="osd-controls-row">
+              <div class="osd-left-controls">
+                <button id="btn-player-play-pause" class="osd-ctrl-btn focusable">
+                  <svg id="ctrl-icon-play" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display: none;">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                  </svg>
+                  <svg id="ctrl-icon-pause" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                    <rect x="6" y="4" width="4" height="16"/>
+                    <rect x="14" y="4" width="4" height="16"/>
+                  </svg>
+                  <span id="ctrl-label-play-pause">إيقاف / Pause</span>
+                </button>
+
+                <button id="btn-player-rewind" class="osd-ctrl-btn focusable">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                    <polygon points="11 19 2 12 11 5 11 19"/>
+                    <polygon points="22 19 13 12 22 5 22 19"/>
+                  </svg>
+                  <span>-10s</span>
+                </button>
+
+                <button id="btn-player-forward" class="osd-ctrl-btn focusable">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                    <polygon points="13 19 22 12 13 5 13 19"/>
+                    <polygon points="2 19 11 12 2 5 2 19"/>
+                  </svg>
+                  <span>+10s</span>
+                </button>
+              </div>
+
+              <div class="osd-right-controls">
+                <button id="btn-player-subs" class="osd-ctrl-btn focusable">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                    <rect width="20" height="14" x="2" y="5" rx="2"/>
+                    <line x1="6" y1="10" x2="10" y2="10"/>
+                    <line x1="14" y1="10" x2="18" y2="10"/>
+                    <line x1="6" y1="14" x2="14" y2="14"/>
+                  </svg>
+                  <span id="label-player-subs">الترجمة / Subtitles</span>
+                </button>
+
+                <button id="btn-player-quality" class="osd-ctrl-btn focusable">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                  </svg>
+                  <span id="label-player-quality">الجودة / Quality</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- Modal: Quality Picker -->
+    <div id="modal-quality" class="modal-overlay">
+      <div class="modal-box">
+        <div class="modal-header">
+          <h2 class="modal-title">اختر جودة الفيديو / Select Quality</h2>
+          <button id="btn-close-modal-quality" class="btn btn-secondary focusable" style="padding: 6px 12px;">إغلاق</button>
+        </div>
+        <div id="modal-quality-options" class="modal-options-list"></div>
+      </div>
+    </div>
+
+    <!-- Modal: Subtitle Picker -->
+    <div id="modal-subtitles" class="modal-overlay">
+      <div class="modal-box">
+        <div class="modal-header">
+          <h2 class="modal-title">اختر ملف الترجمة / Select Subtitles</h2>
+          <button id="btn-close-modal-subtitles" class="btn btn-secondary focusable" style="padding: 6px 12px;">إغلاق</button>
+        </div>
+        <div id="modal-subtitles-options" class="modal-options-list"></div>
+      </div>
+    </div>
+
+    <!-- Global Floating Toast Notification -->
+    <div id="app-toast"></div>
+
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
