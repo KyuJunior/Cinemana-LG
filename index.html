@@ -639,87 +639,200 @@
 
         <!-- Player OSD Overlay -->
         <div id="player-osd">
+          <!-- Top Bar: Back Button & Clock -->
           <div class="osd-top-bar">
-            <div class="osd-title-group">
-              <button id="btn-player-back" class="btn btn-secondary focusable" style="padding: 10px 16px;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-                  <polyline points="15 18 9 12 15 6"/>
-                </svg>
-                رجوع / Back
-              </button>
-              <span id="player-title-text" class="osd-title-text">Cinemana Stream</span>
-            </div>
+            <button id="btn-player-back" class="player-top-back-btn focusable" title="رجوع / Back">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="22" height="22">
+                <polyline points="15 18 9 12 15 6"/>
+              </svg>
+              <span>رجوع / Back</span>
+            </button>
             <div id="player-clock-text" class="osd-clock-text">00:00</div>
           </div>
 
-          <div class="osd-bottom-bar">
-            <div class="osd-progress-row">
-              <span id="player-current-time" class="time-display">00:00</span>
-              <div id="player-timeline" class="osd-timeline-track focusable" tabindex="0">
-                <div id="player-timeline-buffer" class="osd-timeline-buffer"></div>
-                <div id="player-timeline-played" class="osd-timeline-played"></div>
-              </div>
-              <span id="player-total-time" class="time-display">00:00</span>
+          <!-- Middle-Left Section: Title + Subtitle + Playback Row (Exact match to Reference 1 & 2) -->
+          <div class="osd-middle-content">
+            <div class="osd-title-box">
+              <h1 id="player-title-text" class="osd-title-text">Cinemana Stream</h1>
+              <div id="player-subtitle-text" class="osd-subtitle-text"></div>
             </div>
 
-            <div class="osd-controls-row">
-              <div class="osd-left-controls">
-                <button id="btn-player-play-pause" class="osd-ctrl-btn focusable">
-                  <svg id="ctrl-icon-play" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="display: none;">
-                    <polygon points="5 3 19 12 5 21 5 3"/>
+            <!-- Playback Control Buttons Row -->
+            <div class="osd-playback-row">
+              <!-- Play / Pause -->
+              <button id="btn-player-play-pause" class="osd-circle-btn focusable" title="تشغيل / إيقاف">
+                <svg id="ctrl-icon-play" viewBox="0 0 24 24" fill="currentColor" width="30" height="30" style="display: none;">
+                  <polygon points="6 3 20 12 6 21 6 3"/>
+                </svg>
+                <svg id="ctrl-icon-pause" viewBox="0 0 24 24" fill="currentColor" width="30" height="30">
+                  <rect x="5" y="4" width="4.5" height="16" rx="1"/>
+                  <rect x="14.5" y="4" width="4.5" height="16" rx="1"/>
+                </svg>
+              </button>
+
+              <!-- Previous Episode -->
+              <button id="btn-player-prev-ep" class="osd-circle-btn focusable" title="الحلقة السابقة / Previous Episode">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26">
+                  <rect x="4" y="5" width="3" height="14" rx="1"/>
+                  <polygon points="20 5 9 12 20 19 20 5"/>
+                </svg>
+              </button>
+
+              <!-- Rewind 10s -->
+              <button id="btn-player-rewind" class="osd-circle-btn focusable" title="رجوع 10 ثواني / Rewind 10s">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26">
+                  <polygon points="12 5 3 12 12 19 12 5"/>
+                  <polygon points="21 5 12 12 21 19 21 5"/>
+                </svg>
+              </button>
+
+              <!-- Fast Forward 10s -->
+              <button id="btn-player-forward" class="osd-circle-btn focusable" title="تقديم 10 ثواني / Forward 10s">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26">
+                  <polygon points="3 5 12 12 3 19 3 5"/>
+                  <polygon points="12 5 21 12 12 19 12 5"/>
+                </svg>
+              </button>
+
+              <!-- Next Episode -->
+              <button id="btn-player-next-ep" class="osd-circle-btn focusable" title="الحلقة التالية / Next Episode">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26">
+                  <polygon points="4 5 15 12 4 19 4 5"/>
+                  <rect x="17" y="5" width="3" height="14" rx="1"/>
+                </svg>
+              </button>
+
+              <!-- Restart / Replay -->
+              <button id="btn-player-restart" class="osd-circle-btn focusable" title="إعادة من البداية / Restart">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" width="26" height="26">
+                  <polyline points="1 4 1 10 7 10"/>
+                  <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Bottom Area: Timeline + Bottom Controls Rows -->
+          <div class="osd-bottom-container">
+            <!-- Full-width Sleek Red Timeline -->
+            <div id="player-timeline" class="osd-timeline-container focusable" tabindex="0">
+              <div class="osd-timeline-track">
+                <div id="player-timeline-buffer" class="osd-timeline-buffer"></div>
+                <div id="player-timeline-played" class="osd-timeline-played">
+                  <div id="player-timeline-thumb" class="osd-timeline-thumb"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Standard Bottom Bar (Reference 1) -->
+            <div id="player-bottom-main-bar" class="osd-bottom-bar-row">
+              <div class="osd-bottom-left-group">
+                <!-- Fullscreen / Aspect Ratio -->
+                <button id="btn-player-fullscreen" class="osd-icon-btn focusable" title="نسبة العرض / Aspect Ratio">
+                  <svg id="ctrl-icon-fullscreen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="26" height="26">
+                    <rect x="2" y="3" width="20" height="14" rx="2"/>
+                    <line x1="8" y1="21" x2="16" y2="21"/>
+                    <line x1="12" y1="17" x2="12" y2="21"/>
                   </svg>
-                  <svg id="ctrl-icon-pause" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-                    <rect x="6" y="4" width="4" height="16"/>
-                    <rect x="14" y="4" width="4" height="16"/>
+                  <svg id="ctrl-icon-normalscreen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="26" height="26" style="display: none;">
+                    <rect x="4" y="5" width="16" height="11" rx="1.5"/>
+                    <line x1="9" y1="19" x2="15" y2="19"/>
+                    <line x1="12" y1="16" x2="12" y2="19"/>
                   </svg>
-                  <span id="ctrl-label-play-pause">إيقاف / Pause</span>
                 </button>
 
-                <button id="btn-player-rewind" class="osd-ctrl-btn focusable">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-                    <polygon points="11 19 2 12 11 5 11 19"/>
-                    <polygon points="22 19 13 12 22 5 22 19"/>
+                <!-- Subtitles Toggle / Trigger -->
+                <button id="btn-player-subs-toggle" class="osd-icon-btn focusable" title="إعدادات الترجمة / Subtitles">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="26" height="26">
+                    <rect x="2" y="4" width="20" height="16" rx="3"/>
+                    <circle cx="8" cy="12" r="1.3" fill="currentColor"/>
+                    <circle cx="12" cy="12" r="1.3" fill="currentColor"/>
+                    <circle cx="16" cy="12" r="1.3" fill="currentColor"/>
                   </svg>
-                  <span>-10s</span>
                 </button>
 
-                <button id="btn-player-forward" class="osd-ctrl-btn focusable">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-                    <polygon points="13 19 22 12 13 5 13 19"/>
-                    <polygon points="2 19 11 12 2 5 2 19"/>
+                <!-- Cutting Age-Restricted Scenes (Scissors ✂️) -->
+                <button id="btn-player-censor" class="osd-icon-btn osd-censor-btn focusable active" title="قطع المشاهد غير اللائقة / Cut Sensitive Scenes">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="26" height="26">
+                    <circle cx="6" cy="6" r="3"/>
+                    <circle cx="6" cy="18" r="3"/>
+                    <line x1="20" y1="4" x2="8.12" y2="15.88"/>
+                    <line x1="14.47" y1="14.48" x2="20" y2="20"/>
+                    <line x1="8.12" y1="8.12" x2="12" y2="12"/>
                   </svg>
-                  <span>+10s</span>
+                </button>
+
+                <!-- More Options ... (Quality & Speed) -->
+                <button id="btn-player-more" class="osd-icon-btn focusable" title="خيارات إضافية / More Options">
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26">
+                    <circle cx="5" cy="12" r="2.2"/>
+                    <circle cx="12" cy="12" r="2.2"/>
+                    <circle cx="19" cy="12" r="2.2"/>
+                  </svg>
                 </button>
               </div>
 
-              <div class="osd-right-controls">
-                <button id="btn-player-subs" class="osd-ctrl-btn focusable">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-                    <rect width="20" height="14" x="2" y="5" rx="2"/>
-                    <line x1="6" y1="10" x2="10" y2="10"/>
-                    <line x1="14" y1="10" x2="18" y2="10"/>
-                    <line x1="6" y1="14" x2="14" y2="14"/>
+              <!-- Combined Right Timestamp Display -->
+              <div class="osd-bottom-right-group">
+                <span id="player-time-display" class="player-time-text">00:00 / 00:00</span>
+              </div>
+            </div>
+
+            <!-- Subtitles Customization Toolbar Bar (Reference 2) -->
+            <div id="player-bottom-subs-bar" class="osd-bottom-bar-row" style="display: none;">
+              <div class="osd-bottom-left-group">
+                <!-- Back Arrow < -->
+                <button id="btn-sub-back" class="osd-icon-btn focusable" title="رجوع للقائمة الرئيسية">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="26" height="26">
+                    <polyline points="15 18 9 12 15 6"/>
                   </svg>
-                  <span id="label-player-subs">الترجمة / Subtitles</span>
                 </button>
 
-                <button id="btn-player-quality" class="osd-ctrl-btn focusable">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-                    <circle cx="12" cy="12" r="3"/>
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                <!-- [CC] Subtitle Track Picker -->
+                <button id="btn-sub-track" class="osd-icon-btn focusable" title="اختيار ملف الترجمة / Subtitle Track">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="26" height="26">
+                    <rect x="2" y="4" width="20" height="16" rx="3"/>
+                    <path d="M10 9.5C9.5 9 8.5 9 8 9.5C7.2 10.3 7.2 13.7 8 14.5C8.5 15 9.5 15 10 14.5" stroke-linecap="round"/>
+                    <path d="M16 9.5C15.5 9 14.5 9 14 9.5C13.2 10.3 13.2 13.7 14 14.5C14.5 15 15.5 15 16 14.5" stroke-linecap="round"/>
                   </svg>
-                  <span id="label-player-quality">الجودة / Quality</span>
                 </button>
 
-                <button id="btn-player-fullscreen" class="osd-ctrl-btn focusable" title="ملء الشاشة / Fullscreen">
-                  <svg id="ctrl-icon-fullscreen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-                    <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
-                  </svg>
-                  <svg id="ctrl-icon-normalscreen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" style="display: none;">
-                    <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>
-                  </svg>
-                  <span id="label-player-fullscreen">ملء الشاشة / Fullscreen</span>
+                <!-- TT Subtitle Font Size -->
+                <button id="btn-sub-size" class="osd-icon-btn focusable" title="حجم الخط / Font Size">
+                  <span class="icon-tt">TT</span>
                 </button>
+
+                <!-- 🌐 Subtitle Sync -->
+                <button id="btn-sub-sync" class="osd-icon-btn focusable" title="مزامنة وتوقيت الترجمة / Subtitle Sync">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="26" height="26">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="2" y1="12" x2="22" y2="12"/>
+                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                  </svg>
+                </button>
+
+                <!-- 🎨 Subtitle Text Color -->
+                <button id="btn-sub-color" class="osd-icon-btn focusable" title="لون خط الترجمة / Font Color">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="26" height="26">
+                    <path d="M12 2C6.5 2 2 6.5 2 12c0 3.6 2 6.8 5 8.3.4.2.9-.1.9-.6v-1.1c0-.8.7-1.5 1.5-1.5h1.2c4.4 0 8-3.6 8-8 0-5-4-7.1-6.6-7.1z"/>
+                    <circle cx="7.5" cy="10.5" r="1.5" fill="currentColor"/>
+                    <circle cx="12" cy="7.5" r="1.5" fill="currentColor"/>
+                    <circle cx="16.5" cy="10.5" r="1.5" fill="currentColor"/>
+                  </svg>
+                </button>
+
+                <!-- 🌓 Subtitle Background / Contrast Style -->
+                <button id="btn-sub-bg" class="osd-icon-btn focusable" title="خلفية وتباين الترجمة / Background Style">
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26">
+                    <path d="M12 2a10 10 0 0 0 0 20V2z"/>
+                    <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Time Display in Subtitle mode -->
+              <div class="osd-bottom-right-group">
+                <span id="player-sub-time-display" class="player-time-text">00:00 / 00:00</span>
               </div>
             </div>
           </div>
@@ -727,6 +840,26 @@
       </div>
 
     </main>
+
+    <!-- Modal: More Options -->
+    <div id="modal-more" class="modal-overlay">
+      <div class="modal-box">
+        <div class="modal-header">
+          <h2 class="modal-title">خيارات التشغيل / Playback Options</h2>
+          <button id="btn-close-modal-more" class="btn btn-secondary focusable" style="padding: 6px 12px;">إغلاق</button>
+        </div>
+        <div class="modal-options-list">
+          <button id="btn-more-quality" class="modal-option-btn focusable">
+            <span>جودة البث / Streaming Quality: <strong id="more-label-quality" style="color: var(--accent-gold);">Auto</strong></span>
+            <span>❯</span>
+          </button>
+          <button id="btn-more-speed" class="modal-option-btn focusable">
+            <span>سرعة التشغيل / Playback Speed: <strong id="more-label-speed" style="color: var(--accent-gold);">1.0x</strong></span>
+            <span>↻</span>
+          </button>
+        </div>
+      </div>
+    </div>
 
     <!-- Modal: Quality Picker -->
     <div id="modal-quality" class="modal-overlay">

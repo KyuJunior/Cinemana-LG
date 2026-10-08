@@ -923,7 +923,14 @@ html, body {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.25s ease;
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8) 0%, transparent 25%, transparent 65%, rgba(0, 0, 0, 0.9) 100%);
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.88) 0%,
+    rgba(0, 0, 0, 0.25) 20%,
+    rgba(0, 0, 0, 0.1) 50%,
+    rgba(0, 0, 0, 0.85) 80%,
+    rgba(0, 0, 0, 0.96) 100%
+  );
 }
 
 #player-osd.visible {
@@ -932,64 +939,142 @@ html, body {
 }
 
 .osd-top-bar {
-  padding: 24px var(--safe-padding-x);
+  padding: 34px 60px 0 60px;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
-.osd-title-group {
-  display: flex;
+.player-top-back-btn {
+  display: inline-flex;
   align-items: center;
-  gap: 16px;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 600;
+  padding: 8px 20px;
+  border-radius: 24px;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.osd-title-text {
-  font-size: 20px;
-  font-weight: 700;
-  color: #ffffff;
+.player-top-back-btn.focused,
+.player-top-back-btn:focus {
+  background: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
+  transform: scale(1.08);
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.4);
+  outline: none;
 }
 
 .osd-clock-text {
-  font-size: 16px;
+  font-size: 22px;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.85);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 1px;
 }
 
-.osd-bottom-bar {
-  padding: 20px var(--safe-padding-x) 32px var(--safe-padding-x);
+/* Middle-Left Section: Title & Playback Controls Row */
+.osd-middle-content {
+  padding: 0 60px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 18px;
+  margin-bottom: 20px;
 }
 
-.osd-progress-row {
+.osd-title-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.osd-title-text {
+  font-size: 38px;
+  font-weight: 700;
+  color: #ffffff;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9);
+  line-height: 1.2;
+  margin: 0;
+}
+
+.osd-subtitle-text {
+  font-size: 22px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.75);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.85);
+  min-height: 28px;
+}
+
+.osd-playback-row {
   display: flex;
   align-items: center;
+  gap: 22px;
+  margin-top: 8px;
+}
+
+.osd-circle-btn {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  outline: none;
+}
+
+.osd-circle-btn.focused,
+.osd-circle-btn:focus {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: #ffffff;
+  color: #ffffff;
+  transform: scale(1.18);
+  box-shadow: 0 0 22px rgba(255, 255, 255, 0.45);
+}
+
+.osd-circle-btn.disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+/* Bottom Container: Progress Bar & Bottom Actions */
+.osd-bottom-container {
+  padding: 0 60px 40px 60px;
+  display: flex;
+  flex-direction: column;
   gap: 16px;
 }
 
-.time-display {
-  font-size: 14px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  color: var(--text-main);
-  min-width: 65px;
+/* Full-width Timeline */
+.osd-timeline-container {
+  width: 100%;
+  padding: 10px 0;
+  cursor: pointer;
+  outline: none;
 }
 
 .osd-timeline-track {
-  flex: 1;
-  height: 8px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 3px;
   position: relative;
-  cursor: pointer;
+  transition: height 0.18s ease;
 }
 
-.osd-timeline-track.focused,
-.osd-timeline-track:focus {
-  height: 12px;
-  outline: 2px solid var(--accent-gold);
+.osd-timeline-container.focused .osd-timeline-track,
+.osd-timeline-container:focus .osd-timeline-track {
+  height: 10px;
+  box-shadow: 0 0 12px rgba(229, 9, 20, 0.45);
 }
 
 .osd-timeline-buffer {
@@ -997,9 +1082,10 @@ html, body {
   top: 0;
   left: 0;
   height: 100%;
-  background: rgba(255, 255, 255, 0.35);
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.45);
+  border-radius: 3px;
   width: 0%;
+  transition: width 0.2s ease;
 }
 
 .osd-timeline-played {
@@ -1007,43 +1093,102 @@ html, body {
   top: 0;
   left: 0;
   height: 100%;
-  background: var(--accent-gold);
-  border-radius: 4px;
+  background: #e50914; /* Cinemana Red */
+  border-radius: 3px;
   width: 0%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
 
-.osd-controls-row {
+.osd-timeline-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.6), 0 0 4px rgba(229, 9, 20, 0.8);
+  position: absolute;
+  right: -8px;
+  transition: all 0.18s ease;
+}
+
+.osd-timeline-container.focused .osd-timeline-thumb,
+.osd-timeline-container:focus .osd-timeline-thumb {
+  width: 22px;
+  height: 22px;
+  right: -11px;
+  transform: scale(1.15);
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.95);
+}
+
+/* Bottom Bar Rows */
+.osd-bottom-bar-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
-.osd-left-controls,
-.osd-right-controls {
+.osd-bottom-left-group {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 24px;
 }
 
-.osd-ctrl-btn {
-  padding: 10px 18px;
-  border-radius: var(--border-radius-sm);
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  font-size: 14px;
-  font-weight: 600;
-  display: inline-flex;
+.osd-icon-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.85);
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  outline: none;
 }
 
-.osd-ctrl-btn.focused,
-.osd-ctrl-btn:focus {
-  background: var(--accent-gold);
-  color: #000000;
-  border-color: #ffffff;
-  transform: scale(1.05);
+.osd-icon-btn.focused,
+.osd-icon-btn:focus {
+  background: rgba(255, 255, 255, 0.24);
+  color: #ffffff;
+  transform: scale(1.2);
+  box-shadow: 0 0 18px rgba(255, 255, 255, 0.4);
+}
+
+/* Age-Restricted Scene Cutting (Scissors Button) */
+.osd-censor-btn {
+  transition: all 0.2s ease;
+}
+
+.osd-censor-btn.active {
+  color: #38bdf8 !important;
+  filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.75));
+}
+
+.osd-censor-btn.active.focused,
+.osd-censor-btn.active:focus {
+  background: rgba(56, 189, 248, 0.28) !important;
+  color: #38bdf8 !important;
+  box-shadow: 0 0 22px rgba(56, 189, 248, 0.6) !important;
+}
+
+.player-time-text {
+  font-size: 24px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.5px;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+
+.icon-tt {
+  font-size: 24px;
+  font-weight: 800;
+  font-family: sans-serif;
+  letter-spacing: -2px;
+  line-height: 1;
 }
 
 /* Modal Dialog Components */

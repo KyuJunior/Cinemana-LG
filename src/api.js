@@ -492,4 +492,62 @@ export const CinemanaApi = {
 
     return null;
   },
+
+  /**
+   * Fetch censorship / sensitive scene cutting intervals
+   * Returns array of { start: number, end: number }
+   */
+  async getCensorshipIntervals(id) {
+    const cacheKey = `censor_${id}`;
+    const cached = getFromCache(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const rawSkip = await fetchJson(`skippingDurations/id/${id}`, null, 0);
+      if (rawSkip && typeof rawSkip === 'object') {
+        const starts = rawSkip.start;
+        const ends = rawSkip.end;
+        if (Array.isArray(starts) && Array.isArray(ends) && starts.length > 0 && ends.length > 0) {
+          const intervals = [];
+          const count = Math.min(starts.length, ends.length);
+          for (let i = 0; i < count; i++) {
+            const start = parseFloat(starts[i]);
+            const end = parseFloat(ends[i]);
+            if (!isNaN(start) && !isNaN(end) && end > start) {
+              intervals.push({ start, end });
+            }
+          }
+          if (intervals.length > 0) {
+            putInCache(cacheKey, intervals, 60 * 60 * 1000);
+            return intervals;
+          }
+        }
+      }
+    } catch (_) {}
+
+    try {
+      const rawInfo = await fetchJson(`allVideoInfo/id/${id}`, null, 0);
+      if (rawInfo && typeof rawInfo === 'object' && rawInfo.skippingDurations) {
+        const starts = rawInfo.skippingDurations.start;
+        const ends = rawInfo.skippingDurations.end;
+        if (Array.isArray(starts) && Array.isArray(ends) && starts.length > 0 && ends.length > 0) {
+          const intervals = [];
+          const count = Math.min(starts.length, ends.length);
+          for (let i = 0; i < count; i++) {
+            const start = parseFloat(starts[i]);
+            const end = parseFloat(ends[i]);
+            if (!isNaN(start) && !isNaN(end) && end > start) {
+              intervals.push({ start, end });
+            }
+          }
+          if (intervals.length > 0) {
+            putInCache(cacheKey, intervals, 60 * 60 * 1000);
+            return intervals;
+          }
+        }
+      }
+    } catch (_) {}
+
+    return [];
+  },
 };

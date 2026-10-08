@@ -12,6 +12,10 @@ const DEFAULT_SETTINGS = {
   preferredQuality: '1080p',
   parentalLevel: 0,
   preferredLanguage: 'ar',
+  cutCensoredScenes: true,
+  subtitleFontSize: 28,
+  subtitleFontColor: '#ffffff',
+  subtitleBgStyle: 'box',
 };
 
 function readJson(key, fallback) {

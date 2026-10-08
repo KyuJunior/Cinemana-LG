@@ -45,6 +45,11 @@ const state = {
   searchDebounceTimer: null,
   searchFilter: 'all',
   searchResults: { series: [], movies: [], all: [] },
+  censorshipIntervals: [],
+  isCensorEnabled: true,
+  playbackSpeed: 1.0,
+  activeSubtitlesMode: false,
+  activePlayingItem: null,
 };
 
 // DOM Element Cache
@@ -80,27 +85,43 @@ const els = {
   btnSkipIntro: document.getElementById('btn-skip-intro'),
   playerOsd: document.getElementById('player-osd'),
   playerTitleText: document.getElementById('player-title-text'),
+  playerSubtitleText: document.getElementById('player-subtitle-text'),
   playerClockText: document.getElementById('player-clock-text'),
-  playerCurrentTime: document.getElementById('player-current-time'),
-  playerTotalTime: document.getElementById('player-total-time'),
-  playerTimeline: document.getElementById('player-timeline'),
-  playerTimelineBuffer: document.getElementById('player-timeline-buffer'),
-  playerTimelinePlayed: document.getElementById('player-timeline-played'),
   btnPlayerBack: document.getElementById('btn-player-back'),
   btnPlayerPlayPause: document.getElementById('btn-player-play-pause'),
   ctrlIconPlay: document.getElementById('ctrl-icon-play'),
   ctrlIconPause: document.getElementById('ctrl-icon-pause'),
-  ctrlLabelPlayPause: document.getElementById('ctrl-label-play-pause'),
+  btnPlayerPrevEp: document.getElementById('btn-player-prev-ep'),
   btnPlayerRewind: document.getElementById('btn-player-rewind'),
   btnPlayerForward: document.getElementById('btn-player-forward'),
-  btnPlayerSubs: document.getElementById('btn-player-subs'),
-  btnPlayerQuality: document.getElementById('btn-player-quality'),
-  labelPlayerSubs: document.getElementById('label-player-subs'),
-  labelPlayerQuality: document.getElementById('label-player-quality'),
+  btnPlayerNextEp: document.getElementById('btn-player-next-ep'),
+  btnPlayerRestart: document.getElementById('btn-player-restart'),
+  playerTimeline: document.getElementById('player-timeline'),
+  playerTimelineBuffer: document.getElementById('player-timeline-buffer'),
+  playerTimelinePlayed: document.getElementById('player-timeline-played'),
+  playerTimelineThumb: document.getElementById('player-timeline-thumb'),
+  playerBottomMainBar: document.getElementById('player-bottom-main-bar'),
   btnPlayerFullscreen: document.getElementById('btn-player-fullscreen'),
   ctrlIconFullscreen: document.getElementById('ctrl-icon-fullscreen'),
   ctrlIconNormalscreen: document.getElementById('ctrl-icon-normalscreen'),
-  labelPlayerFullscreen: document.getElementById('label-player-fullscreen'),
+  btnPlayerSubsToggle: document.getElementById('btn-player-subs-toggle'),
+  btnPlayerCensor: document.getElementById('btn-player-censor'),
+  btnPlayerMore: document.getElementById('btn-player-more'),
+  playerTimeDisplay: document.getElementById('player-time-display'),
+  playerBottomSubsBar: document.getElementById('player-bottom-subs-bar'),
+  btnSubBack: document.getElementById('btn-sub-back'),
+  btnSubTrack: document.getElementById('btn-sub-track'),
+  btnSubSize: document.getElementById('btn-sub-size'),
+  btnSubSync: document.getElementById('btn-sub-sync'),
+  btnSubColor: document.getElementById('btn-sub-color'),
+  btnSubBg: document.getElementById('btn-sub-bg'),
+  playerSubTimeDisplay: document.getElementById('player-sub-time-display'),
+  modalMore: document.getElementById('modal-more'),
+  btnCloseModalMore: document.getElementById('btn-close-modal-more'),
+  btnMoreQuality: document.getElementById('btn-more-quality'),
+  moreLabelQuality: document.getElementById('more-label-quality'),
+  btnMoreSpeed: document.getElementById('btn-more-speed'),
+  moreLabelSpeed: document.getElementById('more-label-speed'),
   modalQuality: document.getElementById('modal-quality'),
   modalQualityOptions: document.getElementById('modal-quality-options'),
   btnCloseModalQuality: document.getElementById('btn-close-modal-quality'),
@@ -113,7 +134,13 @@ const els = {
 
 // Initialize Spatial Navigation and Subtitles
 const nav = new SpatialNavigation();
-const subtitleEngine = new SubtitleRenderer(els.subtitlesDisplay);
+const userSettings = Storage.getSettings();
+state.isCensorEnabled = userSettings.cutCensoredScenes !== false;
+const subtitleEngine = new SubtitleRenderer(els.subtitlesDisplay, {
+  fontSize: userSettings.subtitleFontSize || 28,
+  fontColor: userSettings.subtitleFontColor || '#ffffff',
+  bgStyle: userSettings.subtitleBgStyle || 'box',
+});
 
 /**
  * Toast Notification Utility
@@ -776,20 +803,47 @@ function closeDetails() {
 /**
  * Video Player Lifecycle & Playback Engine
  */
+/**
+ * Video Player Lifecycle & Playback Engine
+ */
 async function startPlayback(video) {
   state.currentRoute = 'player';
+  state.activePlayingItem = video;
   document.getElementById('screen-player').classList.add('active');
-  els.playerTitleText.textContent = video.primaryTitle || video.displayTitle;
 
+  // Title & Subtitle Styling matching Reference TV UI
+  const isSeriesItem = video.season || video.episodeNumber || (state.activeDetailsVideo && state.activeDetailsVideo.isSeries);
+  if (isSeriesItem) {
+    const s = video.season || state.selectedSeason || 1;
+    const ep = video.episodeNumber || 1;
+    els.playerTitleText.textContent = video.enTitle || video.primaryTitle || 'Cinemana Stream';
+    els.playerSubtitleText.textContent = `الموسم ${s} - الحلقة ${ep}`;
+    if (els.btnPlayerPrevEp) els.btnPlayerPrevEp.classList.remove('disabled');
+    if (els.btnPlayerNextEp) els.btnPlayerNextEp.classList.remove('disabled');
+  } else {
+    els.playerTitleText.textContent = video.enTitle || video.primaryTitle || 'Cinemana Stream';
+    const subParts = [video.arTitle, video.year].filter(Boolean);
+    els.playerSubtitleText.textContent = subParts.join(' • ');
+    if (els.btnPlayerPrevEp) els.btnPlayerPrevEp.classList.add('disabled');
+    if (els.btnPlayerNextEp) els.btnPlayerNextEp.classList.add('disabled');
+  }
+
+  // Ensure bottom bar starts in standard controls mode
+  if (els.playerBottomMainBar) els.playerBottomMainBar.style.display = 'flex';
+  if (els.playerBottomSubsBar) els.playerBottomSubsBar.style.display = 'none';
+  state.activeSubtitlesMode = false;
+
+  updateCensorButtonState();
   showOsd(true);
   subtitleEngine.clear();
 
   try {
     showToast('جاري تحضير البث المباشر...', 2000);
-    const [streams, subs, intro] = await Promise.all([
+    const [streams, subs, intro, censor] = await Promise.all([
       CinemanaApi.getVideoStreams(video.id),
       CinemanaApi.getSubtitles(video.id),
       CinemanaApi.getIntroInterval(video.id),
+      CinemanaApi.getCensorshipIntervals(video.id),
     ]);
 
     if (!streams.length) {
@@ -801,27 +855,33 @@ async function startPlayback(video) {
     state.activeStreams = streams;
     state.activeSubtitles = subs;
     state.introInterval = intro;
+    state.censorshipIntervals = censor || [];
+
+    if (state.censorshipIntervals.length > 0 && state.isCensorEnabled) {
+      showToast(`✂️ تم تفعيل القص الذكي (${state.censorshipIntervals.length} مقاطع غير لائقة)`, 3000);
+    }
 
     // Pick stream matching user preferred quality
     const settings = Storage.getSettings();
     let chosenStream = streams.find(s => s.resolution.toLowerCase().includes(settings.preferredQuality.toLowerCase())) || streams[0];
     state.currentStream = chosenStream;
-    els.labelPlayerQuality.textContent = chosenStream.resolution || 'Auto';
+    if (els.moreLabelQuality) els.moreLabelQuality.textContent = chosenStream.resolution || 'Auto';
 
     // Subtitle setup (default to Arabic if available)
     if (subs.length > 0) {
       const arSub = subs.find(s => s.type === 'ar') || subs[0];
       state.currentSubtitle = arSub;
-      els.labelPlayerSubs.textContent = arSub.label;
       await subtitleEngine.loadTrack(arSub.fileUrl);
     } else {
       state.currentSubtitle = null;
-      els.labelPlayerSubs.textContent = 'الترجمة / Off';
       subtitleEngine.clear();
     }
 
-    // Load stream in HTML5 Video
-    els.videoElement.src = chosenStream.videoUrl;
+    // Apply playback speed
+    if (els.videoElement) {
+      els.videoElement.src = chosenStream.videoUrl;
+      els.videoElement.playbackRate = state.playbackSpeed || 1.0;
+    }
 
     const savedPos = Storage.getSavedPosition(video.id);
     if (savedPos > 10) {
@@ -844,7 +904,6 @@ async function startPlayback(video) {
     if (els.videoElement) els.videoElement.classList.remove('fit-cover', 'fit-fill');
     if (els.ctrlIconFullscreen) els.ctrlIconFullscreen.style.display = 'block';
     if (els.ctrlIconNormalscreen) els.ctrlIconNormalscreen.style.display = 'none';
-    if (els.labelPlayerFullscreen) els.labelPlayerFullscreen.textContent = 'ملء الشاشة / Fullscreen';
 
     // Register back handler
     nav.pushBackHandler(exitPlayer);
@@ -857,6 +916,15 @@ async function startPlayback(video) {
   }
 }
 
+function updateCensorButtonState() {
+  if (!els.btnPlayerCensor) return;
+  if (state.isCensorEnabled) {
+    els.btnPlayerCensor.classList.add('active');
+  } else {
+    els.btnPlayerCensor.classList.remove('active');
+  }
+}
+
 function hideOsd() {
   clearTimeout(state.osdTimer);
   els.playerOsd.classList.remove('visible');
@@ -866,8 +934,8 @@ function hideOsd() {
 function exitPlayer() {
   hideOsd();
   if (els.videoElement) {
-    if (state.activeDetailsVideo && els.videoElement.duration > 60) {
-      Storage.savePlaybackProgress(state.activeDetailsVideo, els.videoElement.currentTime, els.videoElement.duration);
+    if (state.activePlayingItem && els.videoElement.duration > 60) {
+      Storage.savePlaybackProgress(state.activePlayingItem, els.videoElement.currentTime, els.videoElement.duration);
     }
     els.videoElement.pause();
     els.videoElement.classList.remove('fit-cover', 'fit-fill');
@@ -891,13 +959,11 @@ function exitPlayer() {
 
 function updatePlayPauseState(isPlaying) {
   if (isPlaying) {
-    els.ctrlIconPlay.style.display = 'none';
-    els.ctrlIconPause.style.display = 'block';
-    els.ctrlLabelPlayPause.textContent = 'إيقاف / Pause';
+    if (els.ctrlIconPlay) els.ctrlIconPlay.style.display = 'none';
+    if (els.ctrlIconPause) els.ctrlIconPause.style.display = 'block';
   } else {
-    els.ctrlIconPlay.style.display = 'block';
-    els.ctrlIconPause.style.display = 'none';
-    els.ctrlLabelPlayPause.textContent = 'تشغيل / Play';
+    if (els.ctrlIconPlay) els.ctrlIconPlay.style.display = 'block';
+    if (els.ctrlIconPause) els.ctrlIconPause.style.display = 'none';
   }
 }
 
@@ -921,14 +987,18 @@ function showOsd(autoHide = true) {
 }
 
 // Player Video Events
+let lastCensorSkippedIndex = -1;
 els.videoElement.addEventListener('timeupdate', () => {
   const current = els.videoElement.currentTime;
   const total = els.videoElement.duration || 0;
 
-  els.playerCurrentTime.textContent = formatTime(current);
-  els.playerTotalTime.textContent = formatTime(total);
+  const curStr = formatTime(current);
+  const totStr = formatTime(total);
+  const timeFormatted = `${curStr} / ${totStr}`;
+  if (els.playerTimeDisplay) els.playerTimeDisplay.textContent = timeFormatted;
+  if (els.playerSubTimeDisplay) els.playerSubTimeDisplay.textContent = timeFormatted;
 
-  if (total > 0) {
+  if (total > 0 && els.playerTimelinePlayed) {
     const pct = (current / total) * 100;
     els.playerTimelinePlayed.style.width = `${pct}%`;
   }
@@ -942,10 +1012,25 @@ els.videoElement.addEventListener('timeupdate', () => {
   } else {
     els.skipIntroBox.classList.remove('visible');
   }
+
+  // Automatic Age-Restricted Scene Cutting (Censorship Skip)
+  if (state.isCensorEnabled && state.censorshipIntervals && state.censorshipIntervals.length > 0) {
+    for (let i = 0; i < state.censorshipIntervals.length; i++) {
+      const inv = state.censorshipIntervals[i];
+      if (current >= (inv.start - 0.2) && current < inv.end) {
+        if (lastCensorSkippedIndex !== i) {
+          lastCensorSkippedIndex = i;
+          els.videoElement.currentTime = inv.end + 0.1;
+          showToast(`✂️ تم تخطي مشهد غير لائق (${formatTime(inv.start)} - ${formatTime(inv.end)})`, 2500);
+        }
+        break;
+      }
+    }
+  }
 });
 
 els.videoElement.addEventListener('progress', () => {
-  if (els.videoElement.buffered.length > 0 && els.videoElement.duration > 0) {
+  if (els.videoElement.buffered.length > 0 && els.videoElement.duration > 0 && els.playerTimelineBuffer) {
     const end = els.videoElement.buffered.end(els.videoElement.buffered.length - 1);
     const pct = (end / els.videoElement.duration) * 100;
     els.playerTimelineBuffer.style.width = `${pct}%`;
@@ -961,38 +1046,223 @@ els.videoElement.addEventListener('ended', () => {
   showToast('انتهى العرض.');
 });
 
-// Player Controls
-els.btnPlayerPlayPause.addEventListener('click', () => {
-  if (els.videoElement.paused) {
-    els.videoElement.play();
+// Play / Pause Button
+if (els.btnPlayerPlayPause) {
+  els.btnPlayerPlayPause.addEventListener('click', () => {
+    if (els.videoElement.paused) {
+      els.videoElement.play();
+    } else {
+      els.videoElement.pause();
+    }
+    showOsd(true);
+  });
+}
+
+// Rewind 10s
+if (els.btnPlayerRewind) {
+  els.btnPlayerRewind.addEventListener('click', () => {
+    els.videoElement.currentTime = Math.max(0, els.videoElement.currentTime - 10);
+    showOsd(true);
+  });
+}
+
+// Forward 10s
+if (els.btnPlayerForward) {
+  els.btnPlayerForward.addEventListener('click', () => {
+    els.videoElement.currentTime = Math.min(els.videoElement.duration || 0, els.videoElement.currentTime + 10);
+    showOsd(true);
+  });
+}
+
+// Restart from Beginning
+if (els.btnPlayerRestart) {
+  els.btnPlayerRestart.addEventListener('click', () => {
+    if (els.videoElement) {
+      els.videoElement.currentTime = 0;
+      els.videoElement.play();
+      showToast('تمت إعادة التشغيل من البداية');
+      showOsd(true);
+    }
+  });
+}
+
+// Episode Navigation (Next / Previous Episode)
+function playAdjacentEpisode(direction) {
+  if (!state.activeDetailsEpisodes || state.activeDetailsEpisodes.length === 0) {
+    showToast('لا توجد حلقات أخرى متوفرة');
+    return;
+  }
+  const curId = state.activePlayingItem ? state.activePlayingItem.id : null;
+  const curIdx = state.activeDetailsEpisodes.findIndex(ep => String(ep.id) === String(curId));
+  if (curIdx === -1) {
+    showToast('تعذر تحديد الحلقة الحالية');
+    return;
+  }
+  const targetIdx = curIdx + direction;
+  if (targetIdx < 0) {
+    showToast('هذه هي الحلقة الأولى');
+    return;
+  }
+  if (targetIdx >= state.activeDetailsEpisodes.length) {
+    showToast('هذه هي الحلقة الأخيرة');
+    return;
+  }
+  const nextEp = state.activeDetailsEpisodes[targetIdx];
+  const epVideo = {
+    ...state.activeDetailsVideo,
+    id: nextEp.id,
+    arTitle: `${state.activeDetailsVideo ? state.activeDetailsVideo.arTitle : ''} - حلقة ${nextEp.episodeNumber}`,
+    enTitle: `${state.activeDetailsVideo ? state.activeDetailsVideo.enTitle : ''} - Ep ${nextEp.episodeNumber}`,
+    episodeNumber: nextEp.episodeNumber,
+    season: nextEp.season || state.selectedSeason,
+  };
+  startPlayback(epVideo);
+}
+
+if (els.btnPlayerPrevEp) {
+  els.btnPlayerPrevEp.addEventListener('click', () => playAdjacentEpisode(-1));
+}
+
+if (els.btnPlayerNextEp) {
+  els.btnPlayerNextEp.addEventListener('click', () => playAdjacentEpisode(1));
+}
+
+// Skip Intro Action Banner
+if (els.btnSkipIntro) {
+  els.btnSkipIntro.addEventListener('click', () => {
+    if (state.introInterval) {
+      els.videoElement.currentTime = state.introInterval.end;
+      els.skipIntroBox.classList.remove('visible');
+      showToast('تم تخطي المقدمة');
+    }
+  });
+}
+
+if (els.btnPlayerBack) {
+  els.btnPlayerBack.addEventListener('click', exitPlayer);
+}
+
+// Cutting Age-Restricted Scenes Button (Scissors ✂️)
+if (els.btnPlayerCensor) {
+  els.btnPlayerCensor.addEventListener('click', () => {
+    state.isCensorEnabled = !state.isCensorEnabled;
+    updateCensorButtonState();
+    Storage.updateSettings({ cutCensoredScenes: state.isCensorEnabled });
+    if (state.isCensorEnabled) {
+      showToast('✂️ تم تفعيل تخطي المقاطع غير اللائقة');
+    } else {
+      showToast('تم إيقاف تخطي المقاطع غير اللائقة');
+    }
+    showOsd(true);
+  });
+}
+
+// Subtitles Toolbar Toggle (Swap between Standard Bar and Subtitles Customization Bar)
+function setSubtitleToolbarMode(isSubs) {
+  state.activeSubtitlesMode = isSubs;
+  if (isSubs) {
+    if (els.playerBottomMainBar) els.playerBottomMainBar.style.display = 'none';
+    if (els.playerBottomSubsBar) els.playerBottomSubsBar.style.display = 'flex';
+    nav.setFocus(els.btnSubTrack);
   } else {
-    els.videoElement.pause();
+    if (els.playerBottomSubsBar) els.playerBottomSubsBar.style.display = 'none';
+    if (els.playerBottomMainBar) els.playerBottomMainBar.style.display = 'flex';
+    nav.setFocus(els.btnPlayerSubsToggle);
   }
   showOsd(true);
-});
+}
 
-els.btnPlayerRewind.addEventListener('click', () => {
-  els.videoElement.currentTime = Math.max(0, els.videoElement.currentTime - 10);
-  showOsd(true);
-});
+if (els.btnPlayerSubsToggle) {
+  els.btnPlayerSubsToggle.addEventListener('click', () => setSubtitleToolbarMode(true));
+}
+if (els.btnSubBack) {
+  els.btnSubBack.addEventListener('click', () => setSubtitleToolbarMode(false));
+}
 
-els.btnPlayerForward.addEventListener('click', () => {
-  els.videoElement.currentTime = Math.min(els.videoElement.duration || 0, els.videoElement.currentTime + 10);
-  showOsd(true);
-});
+// Subtitle Font Size Cycling
+if (els.btnSubSize) {
+  els.btnSubSize.addEventListener('click', () => {
+    const nextSize = subtitleEngine.cycleFontSize();
+    Storage.updateSettings({ subtitleFontSize: nextSize.size });
+    showToast(`حجم خط الترجمة: ${nextSize.label}`);
+    showOsd(true);
+  });
+}
 
-els.btnSkipIntro.addEventListener('click', () => {
-  if (state.introInterval) {
-    els.videoElement.currentTime = state.introInterval.end;
-    els.skipIntroBox.classList.remove('visible');
-    showToast('تم تخطي المقدمة');
-  }
-});
+// Subtitle Timing / Sync Cycling
+if (els.btnSubSync) {
+  els.btnSubSync.addEventListener('click', () => {
+    const nextSync = subtitleEngine.cycleSyncOffset();
+    showToast(`توقيت الترجمة: ${nextSync.label}`);
+    showOsd(true);
+  });
+}
 
-els.btnPlayerBack.addEventListener('click', exitPlayer);
+// Subtitle Font Color Cycling
+if (els.btnSubColor) {
+  els.btnSubColor.addEventListener('click', () => {
+    const nextColor = subtitleEngine.cycleFontColor();
+    Storage.updateSettings({ subtitleFontColor: nextColor.hex });
+    showToast(`لون الترجمة: ${nextColor.label}`);
+    showOsd(true);
+  });
+}
+
+// Subtitle Background / Contrast Style Cycling
+if (els.btnSubBg) {
+  els.btnSubBg.addEventListener('click', () => {
+    const nextBg = subtitleEngine.cycleBgStyle();
+    Storage.updateSettings({ subtitleBgStyle: nextBg.id });
+    showToast(`نمط خلفية الترجمة: ${nextBg.label}`);
+    showOsd(true);
+  });
+}
+
+// More Options Modal (Quality & Playback Speed)
+if (els.btnPlayerMore) {
+  els.btnPlayerMore.addEventListener('click', () => {
+    if (els.moreLabelQuality) {
+      els.moreLabelQuality.textContent = state.currentStream ? state.currentStream.resolution : 'Auto';
+    }
+    if (els.moreLabelSpeed) {
+      els.moreLabelSpeed.textContent = `${state.playbackSpeed || 1.0}x`;
+    }
+    els.modalMore.classList.add('active');
+    nav.pushBackHandler(closeMoreModal);
+    const firstBtn = els.modalMore.querySelector('.modal-option-btn');
+    if (firstBtn) nav.setFocus(firstBtn);
+  });
+}
+
+function closeMoreModal() {
+  els.modalMore.classList.remove('active');
+  nav.popBackHandler(closeMoreModal);
+  nav.setFocus(els.btnPlayerMore);
+  return true;
+}
+if (els.btnCloseModalMore) els.btnCloseModalMore.addEventListener('click', closeMoreModal);
+
+if (els.btnMoreQuality) {
+  els.btnMoreQuality.addEventListener('click', () => {
+    closeMoreModal();
+    openQualityModal();
+  });
+}
+
+if (els.btnMoreSpeed) {
+  els.btnMoreSpeed.addEventListener('click', () => {
+    const speeds = [1.0, 1.25, 1.5, 2.0, 0.75];
+    const curIdx = speeds.findIndex(s => Math.abs(s - (state.playbackSpeed || 1.0)) < 0.05);
+    const nextIdx = (curIdx + 1) % speeds.length;
+    state.playbackSpeed = speeds[nextIdx];
+    if (els.videoElement) els.videoElement.playbackRate = state.playbackSpeed;
+    if (els.moreLabelSpeed) els.moreLabelSpeed.textContent = `${state.playbackSpeed}x`;
+    showToast(`سرعة التشغيل: ${state.playbackSpeed}x`);
+  });
+}
 
 // Quality Selector Modal
-els.btnPlayerQuality.addEventListener('click', () => {
+function openQualityModal() {
   els.modalQualityOptions.innerHTML = '';
   state.activeStreams.forEach(stream => {
     const btn = document.createElement('button');
@@ -1006,9 +1276,10 @@ els.btnPlayerQuality.addEventListener('click', () => {
       if (state.currentStream !== stream) {
         const curTime = els.videoElement.currentTime;
         state.currentStream = stream;
-        els.labelPlayerQuality.textContent = stream.resolution;
+        if (els.moreLabelQuality) els.moreLabelQuality.textContent = stream.resolution;
         els.videoElement.src = stream.videoUrl;
         els.videoElement.currentTime = curTime;
+        els.videoElement.playbackRate = state.playbackSpeed || 1.0;
         els.videoElement.play();
         showToast(`تم تغيير الجودة إلى ${stream.resolution}`);
       }
@@ -1021,18 +1292,18 @@ els.btnPlayerQuality.addEventListener('click', () => {
   nav.pushBackHandler(closeQualityModal);
   const firstOpt = els.modalQualityOptions.querySelector('.modal-option-btn');
   if (firstOpt) nav.setFocus(firstOpt);
-});
+}
 
 function closeQualityModal() {
   els.modalQuality.classList.remove('active');
   nav.popBackHandler(closeQualityModal);
-  nav.setFocus(els.btnPlayerQuality);
+  nav.setFocus(els.btnPlayerMore);
   return true;
 }
-els.btnCloseModalQuality.addEventListener('click', closeQualityModal);
+if (els.btnCloseModalQuality) els.btnCloseModalQuality.addEventListener('click', closeQualityModal);
 
-// Subtitle Selector Modal
-els.btnPlayerSubs.addEventListener('click', () => {
+// Subtitle Selector Modal (Triggered from [CC] button in Subtitles Toolbar)
+function openSubtitlesModal() {
   els.modalSubtitlesOptions.innerHTML = '';
 
   // "Off" option
@@ -1043,7 +1314,6 @@ els.btnPlayerSubs.addEventListener('click', () => {
   offBtn.addEventListener('click', () => {
     state.currentSubtitle = null;
     subtitleEngine.clear();
-    els.labelPlayerSubs.textContent = 'الترجمة / Off';
     showToast('تم إيقاف الترجمة');
     closeSubtitleModal();
   });
@@ -1057,7 +1327,6 @@ els.btnPlayerSubs.addEventListener('click', () => {
     btn.innerHTML = `<span>${sub.label}</span>${isCur ? '<span>✓</span>' : ''}`;
     btn.addEventListener('click', async () => {
       state.currentSubtitle = sub;
-      els.labelPlayerSubs.textContent = sub.label;
       await subtitleEngine.loadTrack(sub.fileUrl);
       showToast(`تم تفعيل ترجمة ${sub.label}`);
       closeSubtitleModal();
@@ -1069,15 +1338,19 @@ els.btnPlayerSubs.addEventListener('click', () => {
   nav.pushBackHandler(closeSubtitleModal);
   const firstOpt = els.modalSubtitlesOptions.querySelector('.modal-option-btn');
   if (firstOpt) nav.setFocus(firstOpt);
-});
+}
+
+if (els.btnSubTrack) {
+  els.btnSubTrack.addEventListener('click', openSubtitlesModal);
+}
 
 function closeSubtitleModal() {
   els.modalSubtitles.classList.remove('active');
   nav.popBackHandler(closeSubtitleModal);
-  nav.setFocus(els.btnPlayerSubs);
+  nav.setFocus(els.btnSubTrack || els.btnPlayerSubsToggle);
   return true;
 }
-els.btnCloseModalSubtitles.addEventListener('click', closeSubtitleModal);
+if (els.btnCloseModalSubtitles) els.btnCloseModalSubtitles.addEventListener('click', closeSubtitleModal);
 
 // Remote Media Key Bindings
 nav.on('mediaKey', ({ key }) => {
@@ -1119,19 +1392,16 @@ function toggleFullscreenMode() {
     video.classList.add('fit-fill');
     if (els.ctrlIconFullscreen) els.ctrlIconFullscreen.style.display = 'none';
     if (els.ctrlIconNormalscreen) els.ctrlIconNormalscreen.style.display = 'block';
-    if (els.labelPlayerFullscreen) els.labelPlayerFullscreen.textContent = 'تمديد / Stretch';
     showToast('وضع العرض: تمديد ملء الشاشة (Stretch)');
   } else if (video.classList.contains('fit-fill')) {
     video.classList.remove('fit-fill');
     if (els.ctrlIconFullscreen) els.ctrlIconFullscreen.style.display = 'block';
     if (els.ctrlIconNormalscreen) els.ctrlIconNormalscreen.style.display = 'none';
-    if (els.labelPlayerFullscreen) els.labelPlayerFullscreen.textContent = 'ملء الشاشة / Fullscreen';
     showToast('وضع العرض: الحجم الأصلي (Fit)');
   } else {
     video.classList.add('fit-cover');
     if (els.ctrlIconFullscreen) els.ctrlIconFullscreen.style.display = 'none';
     if (els.ctrlIconNormalscreen) els.ctrlIconNormalscreen.style.display = 'block';
-    if (els.labelPlayerFullscreen) els.labelPlayerFullscreen.textContent = 'تكبير / Zoom';
     showToast('وضع العرض: تكبير ملء الشاشة (Zoom Fill)');
   }
 
@@ -1142,7 +1412,7 @@ if (els.btnPlayerFullscreen) {
   els.btnPlayerFullscreen.addEventListener('click', toggleFullscreenMode);
 }
 
-// Click to seek on timeline track
+// Click and Keyboard navigation on timeline track
 if (els.playerTimeline) {
   els.playerTimeline.addEventListener('click', (e) => {
     if (!els.videoElement || !els.videoElement.duration) return;
@@ -1151,6 +1421,20 @@ if (els.playerTimeline) {
     const pct = Math.max(0, Math.min(1, clickX / rect.width));
     els.videoElement.currentTime = pct * els.videoElement.duration;
     showOsd(true);
+  });
+
+  els.playerTimeline.addEventListener('keydown', (e) => {
+    if (e.keyCode === 37) { // Left (rewind 10s)
+      els.videoElement.currentTime = Math.max(0, els.videoElement.currentTime - 10);
+      showOsd(true);
+      e.preventDefault();
+      e.stopPropagation();
+    } else if (e.keyCode === 39) { // Right (forward 10s)
+      els.videoElement.currentTime = Math.min(els.videoElement.duration || 0, els.videoElement.currentTime + 10);
+      showOsd(true);
+      e.preventDefault();
+      e.stopPropagation();
+    }
   });
 }
 
