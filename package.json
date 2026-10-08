@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build && node post-build.js",
     "preview": "vite preview",
+    "simulator": "\"C:\\Myapps\\Ipxtream for webos\\webOS_Simulator\\webOS_TV_26_Simulator_1.5.0\\webOS_TV_26_Simulator_1.5.0.exe\"",
     "webos:package": "ares-package dist --no-minify",
     "webos:install": "ares-install",
     "webos:launch": "ares-launch"
